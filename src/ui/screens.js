@@ -5,7 +5,8 @@ import { addHighScore, getHighScores } from '../storage.js';
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const listMarkup = (items, empty) => items?.length ? `<ul class="term-list">${items.map(({term,definition}) => `<li><strong>${escapeHtml(term)}</strong><span>${escapeHtml(definition)}</span></li>`).join('')}</ul>` : `<p class="muted">${empty}</p>`;
 const tutorialSteps = [
-  { icon: '📷', title: 'GET IN POSITION', message: 'Allow webcam access, then stand far enough back that your shoulders and both wrists stay visible.' },
+  { icon: '📷', title: 'GET IN POSITION', message: 'Allow camera access. Stand back so your upper body and both hands are visible. Raise your hands to about shoulder height, shoulder-width apart.' },
+  { icon: '🔴', title: 'FIND YOUR TWO LASER DOTS', message: 'Look for two glowing laser dots on screen: one follows your left hand, and one follows your right. Move both hands slowly to check that the dots follow you before slicing.' },
   { icon: '🎯', title: 'READ THE RULE', message: 'Each round has its own rule, like SLICE ONLY: SQL COMMANDS. A tech word is only correct when it matches that rule.' },
   { icon: '⚔️', title: 'SLICE THE RIGHT TERMS', message: 'Swipe through matching terms to score. Avoid plausible wrong answers and brainrot words or characters.' },
   { icon: '📈', title: 'LEARN AS YOU PLAY', message: 'Read your mistakes between rounds. At the end, check your score graph and your weakest terms.' }
