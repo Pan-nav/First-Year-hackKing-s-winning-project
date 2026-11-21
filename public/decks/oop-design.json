@@ -1,0 +1,113 @@
+{
+  "id": "oop-design",
+  "title": "OOP & Software Design",
+  "rounds": [
+    {
+      "rule": "Slice only: OOP CONCEPTS",
+      "correct": [
+        "Encapsulation",
+        "Inheritance",
+        "Polymorphism",
+        "Abstraction",
+        "Composition",
+        "Overriding",
+        "Overloading",
+        "Interface"
+      ],
+      "wrong": [
+        "Recursion",
+        "Closure",
+        "Hoisting",
+        "Memory leak",
+        "Memoisation",
+        "Currying"
+      ]
+    },
+    {
+      "rule": "Slice only: DESIGN PATTERNS",
+      "correct": [
+        "Singleton",
+        "Factory",
+        "Observer",
+        "Strategy",
+        "Decorator",
+        "Adapter",
+        "Builder",
+        "Facade"
+      ],
+      "wrong": [
+        "Callback",
+        "Middleware",
+        "Pagination",
+        "Debounce",
+        "Throttle",
+        "Load balancer"
+      ]
+    },
+    {
+      "rule": "Slice only: AGILE TERMS",
+      "correct": [
+        "Sprint",
+        "Backlog",
+        "Stand-up",
+        "Retrospective",
+        "Velocity",
+        "User story",
+        "Epic",
+        "Burndown"
+      ],
+      "wrong": [
+        "Waterfall",
+        "Gantt chart",
+        "Hotfix",
+        "Rollback",
+        "Blue-green",
+        "Code freeze"
+      ]
+    }
+  ],
+  "definitions": {
+    "Encapsulation": "Hides data behind methods",
+    "Inheritance": "A class reuses another class's behaviour",
+    "Polymorphism": "Same call, different behaviour by type",
+    "Abstraction": "Exposes what, hides how",
+    "Composition": "Building objects from other objects",
+    "Overriding": "A subclass replaces a parent method",
+    "Overloading": "Same name, different parameters",
+    "Interface": "A contract of methods to implement",
+    "Recursion": "A function calling itself; not OOP-specific",
+    "Closure": "A function remembering its scope; not OOP",
+    "Hoisting": "JS moves declarations up; not OOP",
+    "Memory leak": "Memory never freed; not an OOP concept",
+    "Memoisation": "Caching function results; not OOP",
+    "Currying": "Chaining one-argument functions; not OOP",
+    "Singleton": "Only one instance exists",
+    "Factory": "Creates objects without naming the class",
+    "Observer": "Subscribers get notified of changes",
+    "Strategy": "Swap algorithms at runtime",
+    "Decorator": "Wraps an object to add behaviour",
+    "Adapter": "Makes incompatible interfaces work together",
+    "Builder": "Builds complex objects step by step",
+    "Facade": "A simple front for a complex system",
+    "Callback": "Function passed to run later; not a GoF pattern",
+    "Middleware": "A request pipeline step; not a GoF pattern",
+    "Pagination": "Splitting results into pages; not a GoF pattern",
+    "Debounce": "Waits for calm before firing; not a GoF pattern",
+    "Throttle": "Limits call rate; not a GoF pattern",
+    "Load balancer": "Spreads traffic; not a GoF pattern",
+    "Sprint": "A fixed short cycle of work",
+    "Backlog": "Prioritised list of work to do",
+    "Stand-up": "Short daily team sync",
+    "Retrospective": "Team review of what to improve",
+    "Velocity": "Work a team finishes per sprint",
+    "User story": "A feature written from the user's view",
+    "Epic": "A large story split into smaller ones",
+    "Burndown": "Chart of work remaining over time",
+    "Waterfall": "Linear phases, not agile",
+    "Gantt chart": "A traditional timeline planning chart",
+    "Hotfix": "Urgent production patch; not an agile term",
+    "Rollback": "Reverting a release; not an agile term",
+    "Blue-green": "A release strategy; not an agile term",
+    "Code freeze": "Pause on changes before release; not agile"
+  }
+}

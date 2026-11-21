@@ -1,0 +1,113 @@
+{
+  "id": "networking-web",
+  "title": "Networking & the Web",
+  "rounds": [
+    {
+      "rule": "Slice only: HTTP METHODS",
+      "correct": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS",
+        "CONNECT"
+      ],
+      "wrong": [
+        "FETCH",
+        "SEND",
+        "UPDATE",
+        "REMOVE",
+        "SUBMIT",
+        "READ"
+      ]
+    },
+    {
+      "rule": "Slice only: 4xx CLIENT ERRORS",
+      "correct": [
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "409",
+        "422",
+        "429"
+      ],
+      "wrong": [
+        "200",
+        "201",
+        "301",
+        "302",
+        "500",
+        "503"
+      ]
+    },
+    {
+      "rule": "Slice only: APP-LAYER PROTOCOLS",
+      "correct": [
+        "HTTP",
+        "HTTPS",
+        "DNS",
+        "SMTP",
+        "FTP",
+        "SSH",
+        "IMAP",
+        "DHCP"
+      ],
+      "wrong": [
+        "TCP",
+        "UDP",
+        "IP",
+        "ICMP",
+        "Ethernet",
+        "ARP"
+      ]
+    }
+  ],
+  "definitions": {
+    "GET": "Reads a resource",
+    "POST": "Sends data to create or process",
+    "PUT": "Replaces a resource",
+    "PATCH": "Partially updates a resource",
+    "DELETE": "Removes a resource",
+    "HEAD": "Like GET but headers only",
+    "OPTIONS": "Asks which methods are allowed",
+    "CONNECT": "Opens a tunnel, e.g. for proxies",
+    "FETCH": "A JavaScript API, not an HTTP method",
+    "SEND": "Not an HTTP method",
+    "UPDATE": "An SQL keyword, not an HTTP method",
+    "REMOVE": "Not an HTTP method",
+    "SUBMIT": "Not an HTTP method",
+    "READ": "Not an HTTP method",
+    "400": "Bad request: malformed syntax",
+    "401": "Unauthorised: needs authentication",
+    "403": "Forbidden: known user, not allowed",
+    "404": "Not found",
+    "405": "Method not allowed",
+    "409": "Conflict with the current state",
+    "422": "Unprocessable: valid syntax, bad content",
+    "429": "Too many requests (rate limited)",
+    "200": "OK: success (2xx)",
+    "201": "Created: success (2xx)",
+    "301": "Moved permanently (3xx)",
+    "302": "Found: temporary redirect (3xx)",
+    "500": "Internal server error (5xx)",
+    "503": "Service unavailable (5xx)",
+    "HTTP": "Web request and response protocol",
+    "HTTPS": "HTTP encrypted with TLS",
+    "DNS": "Turns domain names into IP addresses",
+    "SMTP": "Sends email between servers",
+    "FTP": "File transfer protocol",
+    "SSH": "Encrypted remote login",
+    "IMAP": "Reads email kept on a server",
+    "DHCP": "Hands out IP addresses automatically",
+    "TCP": "Reliable transport-layer protocol",
+    "UDP": "Fast, connectionless transport protocol",
+    "IP": "Network-layer addressing and routing",
+    "ICMP": "Network-layer errors and ping",
+    "Ethernet": "Link-layer standard for wired LANs",
+    "ARP": "Maps IP addresses to MAC addresses"
+  }
+}

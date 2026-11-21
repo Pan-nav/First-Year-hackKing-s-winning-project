@@ -1,0 +1,108 @@
+{
+  "id": "git-cli",
+  "title": "Git & the Command Line",
+  "rounds": [
+    {
+      "rule": "Slice only: GIT COMMANDS",
+      "correct": [
+        "git add",
+        "git commit",
+        "git push",
+        "git pull",
+        "git clone",
+        "git merge",
+        "git rebase",
+        "git stash"
+      ],
+      "wrong": [
+        "ls",
+        "cd",
+        "grep",
+        "chmod",
+        "mkdir",
+        "cat"
+      ]
+    },
+    {
+      "rule": "Slice only: FILE & FOLDER COMMANDS",
+      "correct": [
+        "ls",
+        "cd",
+        "mkdir",
+        "rm",
+        "cp",
+        "mv",
+        "pwd",
+        "touch"
+      ],
+      "wrong": [
+        "git add",
+        "git push",
+        "npm install",
+        "pip install",
+        "docker run",
+        "ssh"
+      ]
+    },
+    {
+      "rule": "Slice only: GIT CONCEPTS",
+      "correct": [
+        "Branch",
+        "HEAD",
+        "Remote",
+        "Tag",
+        "Staging area",
+        "Merge conflict",
+        "Detached HEAD",
+        "origin"
+      ],
+      "wrong": [
+        "Docker image",
+        "Cron job",
+        "Symlink",
+        "Environment var",
+        "Makefile",
+        "Process ID"
+      ]
+    }
+  ],
+  "definitions": {
+    "git add": "Stages changes for the next commit",
+    "git commit": "Saves staged changes as a snapshot",
+    "git push": "Uploads commits to a remote",
+    "git pull": "Fetches and merges remote changes",
+    "git clone": "Copies a remote repo locally",
+    "git merge": "Joins another branch into this one",
+    "git rebase": "Replays commits onto a new base",
+    "git stash": "Shelves uncommitted changes",
+    "ls": "Lists files in a directory",
+    "cd": "Changes the current directory",
+    "grep": "Searches text; not a Git command",
+    "chmod": "Changes permissions; not a Git command",
+    "mkdir": "Creates a directory",
+    "cat": "Prints file contents; not a Git command",
+    "rm": "Deletes files",
+    "cp": "Copies files",
+    "mv": "Moves or renames files",
+    "pwd": "Prints the current directory",
+    "touch": "Creates an empty file",
+    "npm install": "Fetches packages; not a file command",
+    "pip install": "Installs Python packages; not a file command",
+    "docker run": "Starts a container; not a file command",
+    "ssh": "Remote login; not a file command",
+    "Branch": "A movable pointer to a line of commits",
+    "HEAD": "Pointer to your current commit",
+    "Remote": "A copy of the repo hosted elsewhere",
+    "Tag": "A fixed label on a commit, e.g. v1.0",
+    "Staging area": "Where changes wait before a commit",
+    "Merge conflict": "Two changes touch the same lines",
+    "Detached HEAD": "HEAD points at a commit, not a branch",
+    "origin": "Default name of the remote you cloned",
+    "Docker image": "Container template; not Git",
+    "Cron job": "Scheduled task; not Git",
+    "Symlink": "File pointing to another path; not Git",
+    "Environment var": "Named setting for processes; not Git",
+    "Makefile": "Build instructions file; not Git",
+    "Process ID": "Number identifying a process; not Git"
+  }
+}

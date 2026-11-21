@@ -4,18 +4,90 @@
   "rounds": [
     {
       "rule": "Slice only: DATA STRUCTURES",
-      "correct": ["HashMap", "Stack", "Queue", "Linked List", "Heap", "Trie", "Graph", "Deque"],
-      "wrong": ["TCP", "SELECT", "Docker", "REST", "OAuth", "Git rebase", "Regex"]
+      "correct": [
+        "HashMap",
+        "Stack",
+        "Queue",
+        "Linked List",
+        "Heap",
+        "Trie",
+        "Graph",
+        "Deque"
+      ],
+      "wrong": [
+        "TCP",
+        "SELECT",
+        "Docker",
+        "REST",
+        "OAuth",
+        "Git rebase",
+        "Regex"
+      ]
     },
     {
       "rule": "Slice only: O(log n)",
-      "correct": ["Binary search", "Heap push", "Heap pop", "AVL insert", "AVL lookup", "B-tree search"],
-      "wrong": ["Linear scan", "Bubble sort", "Array index", "HashMap get", "Merge sort", "Quick sort", "Matrix mult"]
+      "correct": [
+        "Binary search",
+        "Heap push",
+        "Heap pop",
+        "AVL insert",
+        "AVL lookup",
+        "B-tree search",
+        "Red-black find",
+        "RB-tree insert"
+      ],
+      "wrong": [
+        "Linear scan",
+        "Bubble sort",
+        "Array index",
+        "HashMap get",
+        "Merge sort",
+        "Quick sort",
+        "Matrix mult"
+      ]
     },
     {
       "rule": "Slice only: SQL COMMANDS",
-      "correct": ["SELECT", "INSERT", "UPDATE", "DELETE", "JOIN", "GROUP BY", "HAVING", "WHERE"],
-      "wrong": ["git commit", "docker run", "npm install", "curl", "chmod", "grep", "ssh"]
+      "correct": [
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "JOIN",
+        "GROUP BY",
+        "HAVING",
+        "WHERE"
+      ],
+      "wrong": [
+        "git commit",
+        "docker run",
+        "npm install",
+        "curl",
+        "chmod",
+        "grep",
+        "ssh"
+      ]
+    },
+    {
+      "rule": "Slice only: SORTING ALGORITHMS",
+      "correct": [
+        "Merge sort",
+        "Quick sort",
+        "Bubble sort",
+        "Heap sort",
+        "Insertion sort",
+        "Selection sort",
+        "Radix sort",
+        "Counting sort"
+      ],
+      "wrong": [
+        "Binary search",
+        "Dijkstra",
+        "BFS",
+        "DFS",
+        "A* search",
+        "Kruskal"
+      ]
     }
   ],
   "definitions": {
@@ -60,6 +132,18 @@
     "curl": "Command line tool for HTTP requests",
     "chmod": "Shell command that changes file permissions",
     "grep": "Shell command that searches text",
-    "ssh": "Shell command for secure remote login"
+    "ssh": "Shell command for secure remote login",
+    "Red-black find": "Balanced BST lookup: O(log n)",
+    "RB-tree insert": "Red-black tree insert: O(log n)",
+    "Heap sort": "Builds a heap, then pops: O(n log n)",
+    "Insertion sort": "Grows a sorted prefix: O(n squared)",
+    "Selection sort": "Picks the minimum each pass: O(n squared)",
+    "Radix sort": "Sorts digit by digit, no comparisons",
+    "Counting sort": "Counts occurrences, no comparisons",
+    "Dijkstra": "Shortest paths with non-negative weights",
+    "BFS": "Graph search level by level",
+    "DFS": "Graph search going deep first",
+    "A* search": "Heuristic shortest-path search",
+    "Kruskal": "Finds a minimum spanning tree"
   }
 }

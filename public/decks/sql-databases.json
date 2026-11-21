@@ -1,0 +1,148 @@
+{
+  "id": "sql-databases",
+  "title": "SQL & Databases",
+  "rounds": [
+    {
+      "rule": "Slice only: JOIN TYPES",
+      "correct": [
+        "INNER JOIN",
+        "LEFT JOIN",
+        "RIGHT JOIN",
+        "FULL JOIN",
+        "CROSS JOIN",
+        "SELF JOIN",
+        "NATURAL JOIN",
+        "FULL OUTER JOIN"
+      ],
+      "wrong": [
+        "UNION",
+        "INTERSECT",
+        "GROUP BY",
+        "DISTINCT",
+        "LIMIT",
+        "ORDER BY"
+      ]
+    },
+    {
+      "rule": "Slice only: KEYS AND CONSTRAINTS",
+      "correct": [
+        "PRIMARY KEY",
+        "FOREIGN KEY",
+        "UNIQUE",
+        "NOT NULL",
+        "CHECK",
+        "DEFAULT",
+        "Composite key",
+        "Candidate key"
+      ],
+      "wrong": [
+        "INDEX",
+        "VIEW",
+        "TRIGGER",
+        "CURSOR",
+        "SCHEMA",
+        "SEQUENCE"
+      ]
+    },
+    {
+      "rule": "Slice only: NoSQL DATABASES",
+      "correct": [
+        "MongoDB",
+        "Redis",
+        "Cassandra",
+        "DynamoDB",
+        "Neo4j",
+        "CouchDB",
+        "Firestore",
+        "HBase"
+      ],
+      "wrong": [
+        "PostgreSQL",
+        "MySQL",
+        "SQLite",
+        "Oracle DB",
+        "MariaDB",
+        "SQL Server"
+      ]
+    },
+    {
+      "rule": "Slice only: TRANSACTION TERMS",
+      "correct": [
+        "COMMIT",
+        "ROLLBACK",
+        "SAVEPOINT",
+        "BEGIN",
+        "Isolation",
+        "Atomicity",
+        "Durability",
+        "Consistency"
+      ],
+      "wrong": [
+        "Sharding",
+        "Replication",
+        "Normalisation",
+        "CAP theorem",
+        "Index scan",
+        "Denormalise"
+      ]
+    }
+  ],
+  "definitions": {
+    "INNER JOIN": "Rows with matches in both tables",
+    "LEFT JOIN": "All left rows, plus matches from the right",
+    "RIGHT JOIN": "All right rows, plus matches from the left",
+    "FULL JOIN": "All rows from both tables, matched where possible",
+    "CROSS JOIN": "Every row paired with every row",
+    "SELF JOIN": "A table joined to itself",
+    "NATURAL JOIN": "Joins on same-named columns",
+    "FULL OUTER JOIN": "Same as FULL JOIN",
+    "UNION": "Stacks results of two queries; not a join",
+    "INTERSECT": "Rows common to two queries; not a join",
+    "GROUP BY": "Groups rows for aggregates; not a join",
+    "DISTINCT": "Removes duplicate rows; not a join",
+    "LIMIT": "Caps how many rows return; not a join",
+    "ORDER BY": "Sorts the result; not a join",
+    "PRIMARY KEY": "Uniquely identifies each row",
+    "FOREIGN KEY": "Links to a key in another table",
+    "UNIQUE": "No duplicate values allowed",
+    "NOT NULL": "Value cannot be empty",
+    "CHECK": "Value must satisfy a condition",
+    "DEFAULT": "Value used when none is given",
+    "Composite key": "Key made from several columns",
+    "Candidate key": "Any column set that could be the primary key",
+    "INDEX": "Speeds up lookups; not a constraint",
+    "VIEW": "Saved query; not a constraint",
+    "TRIGGER": "Runs code on changes; not a constraint",
+    "CURSOR": "Walks through rows; not a constraint",
+    "SCHEMA": "Namespace for tables; not a constraint",
+    "SEQUENCE": "Number generator; not a constraint",
+    "MongoDB": "Document database storing JSON-like data",
+    "Redis": "In-memory key-value store",
+    "Cassandra": "Wide-column store built to scale out",
+    "DynamoDB": "AWS key-value and document database",
+    "Neo4j": "Graph database",
+    "CouchDB": "Document database using JSON and HTTP",
+    "Firestore": "Google's document database",
+    "HBase": "Wide-column store on Hadoop",
+    "PostgreSQL": "Open source relational database",
+    "MySQL": "Popular relational database",
+    "SQLite": "Embedded relational database in one file",
+    "Oracle DB": "Commercial relational database",
+    "MariaDB": "MySQL fork, relational",
+    "SQL Server": "Microsoft's relational database",
+    "COMMIT": "Makes a transaction permanent",
+    "ROLLBACK": "Undoes the transaction",
+    "SAVEPOINT": "Marks a point to roll back to",
+    "BEGIN": "Starts a transaction",
+    "Isolation": "Transactions don't see each other's partial work",
+    "Atomicity": "All or nothing",
+    "Durability": "Committed data survives crashes",
+    "Consistency": "Transactions keep the rules valid",
+    "Sharding": "Splits data across servers; not a transaction term",
+    "Replication": "Copies data to other servers; not a transaction term",
+    "Normalisation": "Reduces redundancy; not a transaction term",
+    "CAP theorem": "Distributed trade-off; not a transaction term",
+    "Index scan": "Reads via an index; not a transaction term",
+    "Denormalise": "Adds redundancy for speed; not a transaction term"
+  }
+}
