@@ -1,0 +1,147 @@
+{
+  "id": "spring-week-tech",
+  "title": "Technology Spring Week",
+  "rounds": [
+    {
+      "rule": "Slice only: GIT COMMANDS",
+      "correct": [
+        "clone",
+        "add",
+        "commit",
+        "push",
+        "pull",
+        "branch",
+        "merge",
+        "status"
+      ],
+      "wrong": [
+        "SELECT",
+        "pip",
+        "docker build",
+        "kubectl",
+        "npm",
+        "mvn install"
+      ]
+    },
+    {
+      "rule": "Slice only: AWS SERVICES",
+      "correct": [
+        "EC2",
+        "S3",
+        "RDS",
+        "Lambda",
+        "VPC",
+        "SQS",
+        "DynamoDB",
+        "IAM"
+      ],
+      "wrong": [
+        "Azure VMs",
+        "Compute Engine",
+        "Docker Hub",
+        "Kubernetes",
+        "Heroku",
+        "Redis"
+      ]
+    },
+    {
+      "rule": "Slice only: CYBERSECURITY CONCEPTS",
+      "correct": [
+        "Authentication",
+        "Encryption",
+        "Phishing",
+        "Malware",
+        "Firewall",
+        "VPN",
+        "MFA",
+        "DoS attack"
+      ],
+      "wrong": [
+        "HTTP",
+        "TCP/IP",
+        "REST",
+        "JSON",
+        "Algorithm",
+        "Microservice"
+      ]
+    },
+    {
+      "rule": "Slice only: SQL KEYWORDS",
+      "correct": [
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "FROM",
+        "WHERE",
+        "JOIN",
+        "GROUP BY"
+      ],
+      "wrong": [
+        "Array",
+        "Function",
+        "Class",
+        "docker run",
+        "git commit",
+        "Python"
+      ]
+    }
+  ],
+  "definitions": {
+    "clone": "Copies a remote repository to your local machine",
+    "add": "Stages changes to be committed",
+    "commit": "Saves staged changes to the repository history",
+    "push": "Uploads local commits to a remote repository",
+    "pull": "Fetches and merges changes from a remote repository",
+    "branch": "Lists, creates or deletes branches",
+    "merge": "Combines changes from different branches",
+    "status": "Shows the state of the working directory and staging area",
+    "SELECT": "Retrieves data from a database",
+    "pip": "Python package installer",
+    "docker build": "Constructs an image from a Dockerfile",
+    "npm": "Node.js package manager",
+    "mvn install": "Installs a Maven package",
+    "EC2": "Provides resizable compute capacity in the cloud",
+    "S3": "Object storage for files of any size",
+    "RDS": "Managed relational database service",
+    "Lambda": "Serverless compute service",
+    "VPC": "Your own isolated private network inside AWS",
+    "SQS": "Managed message queue service",
+    "DynamoDB": "NoSQL database service",
+    "IAM": "Manages access to AWS services and resources",
+    "Docker Hub": "Cloud-based registry service for Docker images",
+    "Kubernetes": "Container orchestration system",
+    "Heroku": "Platform-as-a-service for deploying applications",
+    "Redis": "Open-source in-memory data store (not AWS-owned)",
+    "Authentication": "Verifies identity of a user or system",
+    "Encryption": "Scrambles data so only key holders can read it",
+    "Phishing": "Deceptive attempt to obtain sensitive information",
+    "Malware": "Malicious software designed to harm systems",
+    "Firewall": "Filters network traffic using security rules",
+    "VPN": "Encrypted tunnel to a network over the internet",
+    "MFA": "Login that needs two or more proofs of identity",
+    "HTTP": "Protocol for transmitting web pages",
+    "TCP/IP": "Suite of communication protocols for the internet",
+    "REST": "Architectural style for networked applications",
+    "JSON": "Data interchange format",
+    "Algorithm": "Set of rules for problem-solving",
+    "Microservice": "Small, independent service in an application",
+    "INSERT": "Adds new rows of data into a table",
+    "UPDATE": "Modifies existing data in a table",
+    "DELETE": "Removes rows from a table",
+    "FROM": "Specifies the table to retrieve data from",
+    "WHERE": "Filters records based on a specified condition",
+    "JOIN": "Combines rows from two or more tables",
+    "GROUP BY": "Groups rows that have the same values into summary rows",
+    "Array": "Ordered collection of elements",
+    "Function": "Block of code designed to perform a task",
+    "Class": "Blueprint for creating objects",
+    "docker run": "Starts a new container from an image",
+    "git commit": "Saves staged changes to the repository history",
+    "kubectl": "Command-line tool for Kubernetes clusters",
+    "Azure VMs": "Microsoft Azure's virtual machine service",
+    "Compute Engine": "Google Cloud's virtual machine service",
+    "DoS attack": "Floods a service with traffic so it stops responding",
+    "Python": "High-level programming language"
+  }
+}

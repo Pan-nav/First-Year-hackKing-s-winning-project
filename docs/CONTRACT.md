@@ -35,7 +35,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `ui:start` | `{ deckId, input? }` | Start or restart a game. `input` is `'hands'` or `'mouse'` (optional). |
 | `ui:continue` | `{}` | Player pressed NEXT ROUND on the round summary. Engine waits for this. |
 | `ui:pause` / `ui:resume` | `{}` | Pause and resume. |
-| `ui:generateDeck` | `{ jobText, apiKey? }` | Build a deck from a pasted job description. `apiKey` is the player's Anthropic key; it is kept in memory only, so later requests may omit it. Ignored while a generation is running. |
+| `ui:generateDeck` | `{ jobText, apiKey? }` | Build a deck from a pasted job description. `apiKey` is the player's Google AI Studio (Gemini) key, or an Anthropic key starting `sk-ant-`; it is kept in memory only, so later requests may omit it. Ignored while a generation is running. |
 
 ## Engine to everyone (produced by `game/engine.js`)
 | Event | Payload |
@@ -49,7 +49,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `lives:update` | `{ lives, max }` |
 | `round:end` | `{ index, missed: [{ term, definition }], wrongSliced: [{ term, definition }] }` |
 | `game:over` | `{ score, rounds, termStats, weakTerms }` |
-| `deck:generating` | `{}` (a `ui:generateDeck` request started; takes about 10 to 40 s) |
+| `deck:generating` | `{}` (a `ui:generateDeck` request started; usually 10 to 25 s, gives up after about 55 s) |
 | `deck:ready` | `{ deckId, title, rounds }` (`rounds` is the list of rule strings). Start it with `ui:start { deckId }`. |
 | `deck:error` | `{ message }` (a sentence to show the player as is) |
 

@@ -23,5 +23,10 @@
     "id": "oop-design",
     "title": "OOP & Software Design",
     "description": "OOP concepts, design patterns and agile terms."
+  },
+  {
+    "id": "spring-week-tech",
+    "title": "Technology Spring Week",
+    "description": "Made by the job-spec generator (Gemini) from a sample spring-week ad, then checked by hand"
   }
 ]

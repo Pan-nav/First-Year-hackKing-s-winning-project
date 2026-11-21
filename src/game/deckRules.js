@@ -19,8 +19,14 @@ const clean = (s) =>
     .trim();
 
 /** Shorten at a word boundary so the definition fits, ending with an ellipsis. */
-function fitDefinition(text) {
+function fitDefinition(input) {
+  // "...; not a version control concept" tails belong to one round but definitions are shared by
+  // every round that uses the term, so drop them (the game already shows NOT IT on a wrong slice).
+  const text = input.replace(/[;,]\s*not (?:a|an|the)\b[^;,]*$/i, '').replace(/[\s,;:.]+$/, '');
   if (text.length <= RULES.maxDefinitionLength) return text;
+  // Too long: drop trailing clauses first, then cut at a word boundary.
+  const firstClause = text.split(/[;,(]| - /)[0].trim();
+  if (firstClause.length >= 20 && firstClause.length <= RULES.maxDefinitionLength) return firstClause;
   const cut = text.slice(0, RULES.maxDefinitionLength - 1);
   const space = cut.lastIndexOf(' ');
   return `${(space > 40 ? cut.slice(0, space) : cut).replace(/[\s,;:.-]+$/, '')}…`;
