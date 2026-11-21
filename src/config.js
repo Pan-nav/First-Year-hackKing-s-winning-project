@@ -9,7 +9,7 @@ export const CONFIG = {
   comboMax: 5, // multiplier cap
   wrongChance: 0.3, // share of spawned items that are plausible-but-wrong terms
   brainrotChance: 0.15, // share of spawned items that are brainrot
-  missesPerLife: 3, // missed correct terms needed to lose one life
+  missesPerLife: 6, // missed correct terms in one round needed to lose a life (count resets each round)
   gravity: 650, // logical px per second squared (low so words hang long enough to read)
   logicalWidth: 1280,
   logicalHeight: 720,
@@ -18,7 +18,7 @@ export const CONFIG = {
   apexMin: 0.55, // apex height as a share of screen height
   apexMax: 0.85,
   minAirtime: 2.2, // seconds; spawner never throws faster than this
-  spawnIntervalStart: 1.15, // seconds between spawns in round 1
+  spawnIntervalStart: 1.3, // seconds between spawns in round 1
   spawnIntervalStep: 0.12, // shorter each round
   spawnIntervalMin: 0.6,
   doubleSpawnChance: 0.2, // chance a spawn throws two items (rises each round)

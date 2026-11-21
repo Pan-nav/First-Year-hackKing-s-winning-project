@@ -131,6 +131,7 @@ export function createEngine({ canvas }) {
     state = 'playing';
     roundTime = 0;
     timerAcc = 0;
+    misses = 0; // a fresh round forgives partial miss progress
     spawnTimer = FIRST_SPAWN_DELAY;
     missed = new Map();
     wrongSliced = new Map();
