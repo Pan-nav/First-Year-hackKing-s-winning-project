@@ -10,7 +10,20 @@ export function initHud() {
   const wrists = new Map();
   let calibrationEnabled = false;
   let calibrated = false;
-  // No new engine event required: the existing blade:point contract identifies hands 0 and 1.
+  let calibrationTimer;
+  let readyTimer;
+  // Mouse testing can be enabled via the URL even if no input choice appears in the UI.
+  const mouseQuery = new URLSearchParams(window.location.search).get('input') === 'mouse';
+  let mouseMode = mouseQuery;
+
+  function hideCalibration() {
+    calibrationEnabled = false;
+    calibration.hidden = true;
+    clearTimeout(calibrationTimer);
+    clearTimeout(readyTimer);
+  }
+
+  // The existing blade:point contract identifies the two hands as IDs 0 and 1.
   function updateCalibration() {
     if (!calibrationEnabled || calibrated) return;
     const now = performance.now();
@@ -20,7 +33,8 @@ export function initHud() {
     if (active === 2) {
       calibrated = true;
       calibration.classList.add('is-ready');
-      setTimeout(() => { calibration.hidden = true; calibrationEnabled = false; }, 1700);
+      // Briefly acknowledge readiness, then clear the play field.
+      readyTimer = setTimeout(hideCalibration, 450);
     }
   }
   bus.on('blade:point', ({ id }) => {
@@ -32,10 +46,23 @@ export function initHud() {
   setInterval(updateCalibration, 250);
   const rule = $('rule-small');
   const announcement = $('rule-announcement');
+  bus.on('ui:start', ({ input } = {}) => {
+    mouseMode = mouseQuery || input === 'mouse';
+  });
   bus.on('game:start', () => {
-    wrists.clear(); calibrated = false; calibrationEnabled = true;
-    calibration.hidden = false; calibration.classList.remove('is-ready');
-    updateCalibration();
+    hideCalibration();
+    wrists.clear();
+    calibrated = false;
+    calibration.classList.remove('is-ready');
+    for (const id of [0, 1]) $('cal-dot-' + id).classList.remove('detected');
+    if (!mouseMode) {
+      calibrationEnabled = true;
+      calibration.hidden = false;
+      $('calibration-status').textContent = 'LOOK FOR TWO LASER DOTS';
+      // Hide even when only one hand is detected; don't cover flying words.
+      calibrationTimer = setTimeout(hideCalibration, 4000);
+      updateCalibration();
+    }
     $('score').textContent = '000000'; $('combo').textContent = 'x1';
     $('timer-fill').style.width = '100%'; $('lives').textContent = '🧠🧠🧠';
     $('brain-mascot').className = 'mascot mascot-0';
@@ -70,5 +97,5 @@ export function initHud() {
     $('brain-mascot').querySelector('small').textContent = remaining ? ['STAY SHARP!', 'OW!', 'CRITICAL!', 'MELTING!'][damage] : 'GAME OVER';
   });
   bus.on('round:end', () => announcement.classList.remove('visible'));
-  bus.on('game:over', () => { announcement.classList.remove('visible'); calibration.hidden = true; calibrationEnabled = false; });
+  bus.on('game:over', () => { announcement.classList.remove('visible'); hideCalibration(); });
 }
