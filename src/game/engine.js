@@ -198,6 +198,10 @@ export function createEngine({ canvas }) {
   document.addEventListener('click', (e) => {
     if (e.target.closest?.('#screens [data-action="again"]')) menuTarget = null;
   });
+  // Enter/Space on GAME OVER also leaves for the start screen (src/ui/screens.js): drop the target then too.
+  document.addEventListener('keydown', (e) => {
+    if (state === 'over' && ['Enter', ' '].includes(e.key) && !e.target.matches?.('input, textarea, select')) menuTarget = null;
+  });
 
   function startRound(i) {
     menuTarget = null;

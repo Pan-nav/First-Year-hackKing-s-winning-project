@@ -188,7 +188,8 @@ export async function initScreens() {
     mainAction?.();
   });
   bus.on('game:start', () => {
-    if (!startedAt) { startedAt = performance.now(); samples = [{ elapsed: 0, score: 0 }]; }
+    // Every game starts a fresh score graph (a swiped PLAY AGAIN never clicks START, which also reset it).
+    startedAt = performance.now(); samples = [{ elapsed: 0, score: 0 }];
     root.innerHTML = ''; screen = 'playing'; mainAction = null;
   });
   bus.on('score:update', ({ score }) => {
