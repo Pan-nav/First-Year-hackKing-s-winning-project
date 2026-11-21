@@ -10,6 +10,13 @@ export const CONFIG = {
   wrongChance: 0.25, // share of spawned items that are plausible-but-wrong terms (rises to 0.35)
   brainrotChance: 0.25, // share of spawned items that are brainrot (rises to 0.3), so judges meet it
   minBrainrotPerRound: 2, // forced if chance alone has not produced them by 1/3 and 2/3 of the round
+  // Brainrot characters: names match the Partner's consequence animations in src/ui/effects.js
+  // (lower-cased exact match), and each is 16 characters or fewer. The first is the star: every game
+  // shows it once, at characterGuaranteeAt of round 1. Otherwise characterShare of brainrot spawns
+  // are characters.
+  brainrotCharacters: ['TUNG TUNG SAHUR', 'TRALALERO', 'BOMBARDIRO', 'CAPPUCCINA'],
+  characterShare: 0.25,
+  characterGuaranteeAt: 0.35,
   missesPerLife: 6, // missed correct terms in one round needed to lose a life (count resets each round)
   gravity: 650, // logical px per second squared (low so words hang long enough to read)
   logicalWidth: 1280,

@@ -120,7 +120,8 @@ export function createEngine({ canvas }) {
   let missed = new Map();
   let wrongSliced = new Map();
   let diff = {};
-  let spawned = { correct: 0, wrong: 0, brainrot: 0 }; // this round's spawn mix (logged at round end)
+  let spawned = { correct: 0, wrong: 0, brainrot: 0, characters: 0 }; // this round's mix (logged at round end)
+  let characterShown = false; // has this game shown a brainrot character yet (see CONFIG.brainrotCharacters)
   let bag = []; // shuffled kinds still to deal this round (see refillBag)
   let nextId = 1;
   let cards = []; // definition cards: { x, y, w, h, title, lines, color, born }
@@ -194,7 +195,7 @@ export function createEngine({ canvas }) {
     timerAcc = 0;
     misses = 0; // a fresh round forgives partial miss progress
     spawnTimer = FIRST_SPAWN_DELAY;
-    spawned = { correct: 0, wrong: 0, brainrot: 0 };
+    spawned = { correct: 0, wrong: 0, brainrot: 0, characters: 0 };
     bag = [];
     missed = new Map();
     wrongSliced = new Map();
@@ -215,7 +216,8 @@ export function createEngine({ canvas }) {
 
   const logMix = () =>
     console.info(
-      `[engine] round ${roundIndex + 1}: spawned ${spawned.correct} correct, ${spawned.wrong} wrong, ${spawned.brainrot} brainrot`,
+      `[engine] round ${roundIndex + 1}: spawned ${spawned.correct} correct, ${spawned.wrong} wrong, ` +
+        `${spawned.brainrot} brainrot (${spawned.characters} of them characters)`,
     );
 
   function endRound() {
@@ -264,7 +266,8 @@ export function createEngine({ canvas }) {
   // mix (pure chance gave rounds like 8 brainrot vs 4 correct). With the default chances a bag is
   // 4 correct, 2 wrong, 2 brainrot; later rounds trade a correct for a wrong.
   function refillBag() {
-    const b = brainrot.length ? Math.max(1, Math.round(BAG_SIZE * diff.brainrot)) : 0;
+    const hasBrainrot = brainrot.length > 0 || CONFIG.brainrotCharacters.length > 0;
+    const b = hasBrainrot ? Math.max(1, Math.round(BAG_SIZE * diff.brainrot)) : 0;
     const w = Math.round(BAG_SIZE * diff.wrong);
     bag = [
       ...Array(Math.max(1, BAG_SIZE - b - w)).fill('correct'),
@@ -279,14 +282,20 @@ export function createEngine({ canvas }) {
 
   function spawnOne() {
     const round = deck.rounds[roundIndex];
+    const chars = CONFIG.brainrotCharacters;
     if (!bag.length) refillBag();
     // Safety net: every round shows at least minBrainrotPerRound brainrot words. If the bag has not
     // dealt the first by 1/3 of the round (the second by 2/3), take one out of the bag now.
     const need = CONFIG.minBrainrotPerRound;
     const due =
-      brainrot.length && spawned.brainrot < need && roundTime >= (CONFIG.roundSeconds * (spawned.brainrot + 1)) / (need + 1);
+      (brainrot.length > 0 || chars.length > 0) &&
+      spawned.brainrot < need &&
+      roundTime >= (CONFIG.roundSeconds * (spawned.brainrot + 1)) / (need + 1);
+    // Demo guarantee: every game shows the star character (chars[0]) once, early in round 1.
+    const characterDue =
+      chars.length > 0 && !characterShown && roundIndex === 0 && roundTime >= CONFIG.roundSeconds * CONFIG.characterGuaranteeAt;
     let kind;
-    if (due) {
+    if (due || characterDue) {
       const i = bag.indexOf('brainrot');
       if (i >= 0) bag.splice(i, 1);
       kind = 'brainrot';
@@ -294,8 +303,20 @@ export function createEngine({ canvas }) {
       kind = bag.pop();
     }
     spawned[kind]++;
-    const pool = kind === 'brainrot' ? brainrot : round[kind];
-    const term = pickTerm(pool, kind !== 'brainrot');
+    let term;
+    let character = false;
+    if (kind === 'brainrot') {
+      // Brainrot characters (their names match the Partner's consequence animations in ui/effects.js)
+      // are a share of the brainrot spawns, on top of the guaranteed one.
+      character = chars.length > 0 && (characterDue || !brainrot.length || Math.random() < CONFIG.characterShare);
+      term = character ? (characterDue ? chars[0] : pickTerm(chars, false)) : pickTerm(brainrot, false);
+      if (character) {
+        characterShown = true;
+        spawned.characters++;
+      }
+    } else {
+      term = pickTerm(round[kind]);
+    }
     const review = kind !== 'brainrot' && isReview(term);
     if (kind !== 'brainrot') {
       stat(term).seen++;
@@ -326,6 +347,7 @@ export function createEngine({ canvas }) {
       term,
       kind,
       review,
+      character,
       x: x0,
       y: y0,
       vx: (x1 - x0) / Math.max(airtime, CONFIG.minAirtime),
@@ -640,6 +662,18 @@ export function createEngine({ canvas }) {
       ctx.fillText(it.term, rand(-14, 14), 2);
       ctx.restore();
     }
+    // Brainrot characters get a tab so judges notice the rare one (slicing it still costs a life).
+    if (it.character) {
+      ctx.font = TAG_FONT;
+      const label = '★ RARE BRAINROT';
+      const tw = ctx.measureText(label).width + 16;
+      roundRectPath(ctx, -w / 2 + 12, -h / 2 - 24, tw, 26, 6);
+      ctx.fillStyle = '#ff2bd6';
+      ctx.fill();
+      ctx.fillStyle = '#16001a';
+      ctx.fillText(label, -w / 2 + 12 + tw / 2, -h / 2 - 10);
+      ctx.font = FONT;
+    }
   }
 
   const SLICED_COLOR = { correct: '#39ff14', wrong: '#ff3355' };
@@ -766,6 +800,7 @@ export function createEngine({ canvas }) {
       banner = null;
       termStats = {};
       pickStats = structuredClone(history);
+      characterShown = false;
       paused = false;
       blades.clear();
       bus.emit('game:start', { deckId: deck.id, deckTitle: deck.title, totalRounds: deck.rounds.length });

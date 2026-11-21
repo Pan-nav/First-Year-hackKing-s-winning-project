@@ -83,6 +83,8 @@ Rules enforced by `npm run check:decks`: at least 3 rounds; each round has at le
 
 **`public/decks/brainrot.json`**: `{ "words": ["rizz", "..."] }` (clean words only, 16 characters or fewer)
 
+**Brainrot characters** are added by the engine from `CONFIG.brainrotCharacters` (`src/config.js`), not from `brainrot.json`: `TUNG TUNG SAHUR`, `TRALALERO`, `BOMBARDIRO`, `CAPPUCCINA`. They arrive as `item:slice` with `kind: 'brainrot'` and `term` exactly as listed, so `ui/effects.js` matches them lower-cased. Every game shows `TUNG TUNG SAHUR` once in round 1; after that about a quarter of brainrot spawns are characters. To add one, add its name to that list (16 characters or fewer) and a matching key in `ui/effects.js`.
+
 ## Storage (`src/storage.js`)
 - `getHighScores()` returns `[{ initials, score, date }]`, best first, max 10
 - `addHighScore({ initials, score })` returns the updated list
