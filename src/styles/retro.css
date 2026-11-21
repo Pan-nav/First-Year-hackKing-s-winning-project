@@ -98,3 +98,21 @@ button:focus-visible,input:focus-visible {outline:3px solid #fff;outline-offset:
 .job-loading {display:inline-block;padding:22px;margin:24px 0;border:2px solid var(--cyan);color:var(--green);font-weight:bold;letter-spacing:.05em}
 .job-error {max-width:690px;margin:18px auto;color:#ff829c;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:640px) {.job-spec-form textarea {min-height:120px}.job-spec-actions {flex-direction:column}.job-spec-actions button {width:100%}}
+
+/* Camera readiness: visual status only; engine owns gameplay timing. */
+.hand-calibration {position:absolute;z-index:6;left:50%;top:125px;transform:translateX(-50%);width:min(560px,calc(100% - 44px));box-sizing:border-box;padding:13px 17px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;background:#071529eF;border:2px solid var(--cyan);border-radius:8px;box-shadow:0 0 24px #00ffff3d;pointer-events:none;color:#e2fffe}
+.hand-calibration[hidden] {display:none}
+.calibration-title {font:clamp(10px,1.1vw,13px)/1.4 'Press Start 2P',monospace;color:var(--cyan)}
+.calibration-guide {font:14px/1.4 monospace;color:#d0e7f2}
+.calibration-dots {display:flex;flex-wrap:wrap;justify-content:center;gap:16px}
+.cal-dot {font:bold 13px/1.4 monospace;color:#748398;border:1px solid #45566b;border-radius:20px;padding:5px 12px}
+.cal-dot.detected {color:var(--green);border-color:var(--green);text-shadow:0 0 10px var(--green)}
+#calibration-status {font:bold 12px/1.4 monospace;color:var(--pink)}
+.hand-calibration.is-ready {border-color:var(--green);box-shadow:0 0 25px #58ff9a80}
+.hand-calibration.is-ready #calibration-status {color:var(--green)}
+.slice-combo-flash {position:absolute;z-index:6;top:19%;left:50%;transform:translateX(-50%);padding:12px 18px;background:#091324e8;border:2px solid var(--pink);color:#ffe175;font:clamp(13px,2vw,24px)/1.7 'Press Start 2P',monospace;text-align:center;pointer-events:none;text-shadow:0 0 15px var(--pink);white-space:nowrap}
+.slice-combo-flash[hidden] {display:none}
+.slice-combo-flash.combo-pop {animation:combo-pop .28s ease-out}
+@keyframes combo-pop {from {opacity:0;transform:translateX(-50%) scale(.7)}to {opacity:1;transform:translateX(-50%) scale(1)}}
+@media(max-height:760px) {.hand-calibration {top:108px;padding:9px 12px;gap:6px}.calibration-guide {font-size:12px}}
+@media(prefers-reduced-motion:reduce) {.slice-combo-flash.combo-pop {animation:none!important}}
