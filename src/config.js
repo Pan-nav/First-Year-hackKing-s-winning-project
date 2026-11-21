@@ -14,6 +14,7 @@ export const CONFIG = {
   logicalWidth: 1280,
   logicalHeight: 720,
   minSliceSpeed: 0.6, // blade speed (screen widths per second) needed to count as a slice
+  maxJump: 0.35, // a blade move longer than this (screen widths) in one sample starts a new stroke
   apexMin: 0.55, // apex height as a share of screen height
   apexMax: 0.85,
   minAirtime: 2.2, // seconds; spawner never throws faster than this

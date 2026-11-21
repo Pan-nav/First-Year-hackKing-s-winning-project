@@ -241,10 +241,13 @@ export function createEngine({ canvas }) {
     if (!prev || paused || (state !== 'playing' && state !== 'ending')) return;
     const dt = t - prev.t;
     if (dt <= 0 || dt > MAX_STROKE_GAP_MS) return;
+    // A huge jump in one sample is a tracking glitch (hand ids swapped, hand re-acquired), not a swipe.
+    if (Math.hypot(lx - prev.x, ly - prev.y) > CONFIG.maxJump * W) return;
     const speed = Math.hypot(lx - prev.x, ly - prev.y) / W / (dt / 1000); // screen widths per second
     if (speed < CONFIG.minSliceSpeed) return;
 
     for (const it of items) {
+      if (state === 'over') break; // slicing brainrot can end the game mid-stroke
       if (it.sliced) continue;
       const half = Math.max(0, it.w / 2 - it.h / 2);
       const ax = Math.cos(it.rot) * half;
