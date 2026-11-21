@@ -91,7 +91,7 @@ const tunedBlock = `${marker}
 @media(prefers-reduced-motion:reduce){.screen-start.pub-intro-play .pub-sign,.screen-start.pub-intro-play .pub-sign-rope,.screen-start.pub-intro-play .pub-sign-controls > *, .screen-start.pub-intro-play .deck-choice,.screen-start.pub-intro-play .start-actions .primary-button,.screen-start.pub-intro-play .start-actions .secondary-button,.screen-start.pub-intro-play .job-entry-button{animation:none!important;transform:none!important;opacity:1!important;filter:none!important}}
 `;
 
-css = css.slice(0, start).trimEnd() + '\n\n' + tunedBlock + '\n';
+css = css.slice(0, start).trimEnd() + '\n\n' + tunedBlock;
 fs.writeFileSync(cssPath, css);
 console.log('Updated pub banner motion and retro blocky button reveal in src/styles/retro.css');
 console.log('Run: npm run build && npm run dev');
