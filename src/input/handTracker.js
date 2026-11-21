@@ -7,6 +7,7 @@ import { OneEuro } from './oneEuro.js';
 
 const INDEX_FINGERTIP = 8;
 const HAND_LOST_MS = 120; // no detection for this long -> blade:end
+const NEW_HAND_COST = 0.3; // normalised distance beyond which a detection is not the hand we were tracking
 
 // Local copies (npm run vendor:mediapipe) are preferred so the demo works offline; otherwise use the CDN.
 const LOCAL = `${import.meta.env.BASE_URL}mediapipe/`;
@@ -66,6 +67,20 @@ export async function startHandTracker({ video }) {
   const filters = [0, 1].map(() => ({ x: new OneEuro(), y: new OneEuro() }));
   const lastSeen = [-Infinity, -Infinity];
   const active = [false, false];
+  const lastPos = [null, null];
+
+  // Keep each blade id glued to the same physical hand by nearest position. MediaPipe's
+  // Left/Right label flips often, and an id jumping between hands looks like a full-screen swipe.
+  // A tracked hand further than NEW_HAND_COST away is treated as a different hand (new stroke).
+  const cost = (tip, id) =>
+    active[id] && lastPos[id] ? Math.hypot(tip.x - lastPos[id].x, tip.y - lastPos[id].y) : NEW_HAND_COST;
+  function assignIds(tips) {
+    if (tips.length === 0) return [];
+    if (tips.length === 1) return cost(tips[0], 0) <= cost(tips[0], 1) ? [0] : [1];
+    const straight = cost(tips[0], 0) + cost(tips[1], 1);
+    const swapped = cost(tips[0], 1) + cost(tips[1], 0);
+    return straight <= swapped ? [0, 1] : [1, 0];
+  }
   let lastVideoTime = -1;
   let frames = 0;
   let fpsStart = performance.now();
@@ -87,19 +102,16 @@ export async function startHandTracker({ video }) {
 
     const now = performance.now();
     const result = landmarker.detectForVideo(video, now);
-    const usedIds = new Set();
+    // mirror so moving right goes right
+    const tips = result.landmarks.slice(0, 2).map((lm) => ({ x: 1 - lm[INDEX_FINGERTIP].x, y: lm[INDEX_FINGERTIP].y }));
+    const ids = assignIds(tips);
 
-    result.landmarks.forEach((landmarks, i) => {
-      // Handedness only keeps ids stable between frames. If both hands get the same label, use the free id.
-      let id = result.handedness?.[i]?.[0]?.categoryName === 'Left' ? 0 : 1;
-      if (usedIds.has(id)) id = 1 - id;
-      if (usedIds.has(id)) return;
-      usedIds.add(id);
-
-      const tip = landmarks[INDEX_FINGERTIP];
-      const x = filters[id].x.filter(1 - tip.x, now / 1000); // mirror so moving right goes right
+    tips.forEach((tip, i) => {
+      const id = ids[i];
+      const x = filters[id].x.filter(tip.x, now / 1000);
       const y = filters[id].y.filter(tip.y, now / 1000);
       lastSeen[id] = now;
+      lastPos[id] = { x, y };
       active[id] = true;
       bus.emit('blade:point', { id, x, y, t: now });
     });

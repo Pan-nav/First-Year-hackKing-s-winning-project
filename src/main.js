@@ -23,10 +23,15 @@ initHud();
 initFx(document.getElementById('fx'));
 initAudio();
 
+// The running input is kept between games: restarting the camera and rebuilding the hand model
+// on every PLAY AGAIN costs seconds. It is only swapped when the requested kind changes.
 let stopInput = null;
+let requestedInput = null;
 async function useInput(kind) {
+  if (kind === requestedInput && stopInput) return;
   if (stopInput) stopInput();
   stopInput = null;
+  requestedInput = kind;
   if (kind === 'hands') {
     try {
       stopInput = await startHandTracker({ video: document.getElementById('cam') });
@@ -38,10 +43,19 @@ async function useInput(kind) {
   stopInput = startMouseBlade(stage);
 }
 
+let starting = false; // ignore double clicks on START while the camera and deck load
 bus.on('ui:start', async ({ deckId, input = defaultInput }) => {
-  await useInput(input);
-  const [deck, brainrot] = await Promise.all([loadDeck(deckId), loadBrainrot()]);
-  engine.start({ deck, brainrot, history: getTermStats() });
+  if (starting) return;
+  starting = true;
+  try {
+    await useInput(input);
+    const [deck, brainrot] = await Promise.all([loadDeck(deckId), loadBrainrot()]);
+    engine.start({ deck, brainrot, history: getTermStats() });
+  } catch (err) {
+    console.error('Could not start the game:', err);
+  } finally {
+    starting = false;
+  }
 });
 
 // O4 adaptive repetition: fold this game's stats into the stored history (local only, no accounts).
