@@ -43,13 +43,44 @@ async function useInput(kind) {
   stopInput = startMouseBlade(stage);
 }
 
+// O6: paste a job description, get a deck. Generated decks and the player's API key live in memory
+// only: nothing is saved, and a reload forgets both. The SDK is loaded on first use, so it costs
+// nothing for players who never open the job-spec panel.
+const generatedDecks = new Map(); // deckId -> deck
+let apiKeyInMemory = '';
+let generating = false;
+bus.on('ui:generateDeck', async ({ jobText, apiKey }) => {
+  if (generating) return;
+  generating = true;
+  if (apiKey) apiKeyInMemory = String(apiKey).trim();
+  bus.emit('deck:generating', {});
+  try {
+    const [{ generateDeck }, brainrot] = await Promise.all([import('./game/deckGen.js'), loadBrainrot()]);
+    const { deck, dropped } = await generateDeck({ jobText, apiKey: apiKeyInMemory, brainrot });
+    if (dropped.length) console.info('[deckGen] dropped while validating:', dropped);
+    generatedDecks.set(deck.id, deck);
+    // Demo backup: copy(JSON.stringify(lastGeneratedDeck, null, 2)) in DevTools, save it to public/decks.
+    window.lastGeneratedDeck = deck;
+    bus.emit('deck:ready', {
+      deckId: deck.id,
+      title: deck.title,
+      rounds: deck.rounds.map((r) => r.rule),
+    });
+  } catch (err) {
+    console.warn('[deckGen]', err.cause ?? err);
+    bus.emit('deck:error', { message: err.message });
+  } finally {
+    generating = false;
+  }
+});
+
 let starting = false; // ignore double clicks on START while the camera and deck load
 bus.on('ui:start', async ({ deckId, input = defaultInput }) => {
   if (starting) return;
   starting = true;
   try {
     await useInput(input);
-    const [deck, brainrot] = await Promise.all([loadDeck(deckId), loadBrainrot()]);
+    const [deck, brainrot] = await Promise.all([generatedDecks.get(deckId) ?? loadDeck(deckId), loadBrainrot()]);
     engine.start({ deck, brainrot, history: getTermStats() });
   } catch (err) {
     console.error('Could not start the game:', err);

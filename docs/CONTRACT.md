@@ -35,6 +35,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `ui:start` | `{ deckId, input? }` | Start or restart a game. `input` is `'hands'` or `'mouse'` (optional). |
 | `ui:continue` | `{}` | Player pressed NEXT ROUND on the round summary. Engine waits for this. |
 | `ui:pause` / `ui:resume` | `{}` | Pause and resume. |
+| `ui:generateDeck` | `{ jobText, apiKey? }` | Build a deck from a pasted job description. `apiKey` is the player's Anthropic key; it is kept in memory only, so later requests may omit it. Ignored while a generation is running. |
 
 ## Engine to everyone (produced by `game/engine.js`)
 | Event | Payload |
@@ -48,6 +49,9 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `lives:update` | `{ lives, max }` |
 | `round:end` | `{ index, missed: [{ term, definition }], wrongSliced: [{ term, definition }] }` |
 | `game:over` | `{ score, rounds, termStats, weakTerms }` |
+| `deck:generating` | `{}` (a `ui:generateDeck` request started; takes about 10 to 40 s) |
+| `deck:ready` | `{ deckId, title, rounds }` (`rounds` is the list of rule strings). Start it with `ui:start { deckId }`. |
+| `deck:error` | `{ message }` (a sentence to show the player as is) |
 
 `termStats` is for this game only: `{ [term]: { seen, errors } }`.
 `weakTerms` is the top 5 terms by errors: `[{ term, definition }]`.
@@ -74,6 +78,8 @@ After `round:end` the engine pauses until `ui:continue`. After the last round (o
 }
 ```
 Rules enforced by `npm run check:decks`: at least 3 rounds; each round has at least 6 `correct` and 5 `wrong` terms; every term has a definition of 80 characters or fewer; terms are 16 characters or fewer; no duplicates.
+
+**Generated decks** (from `ui:generateDeck`) have the same shape plus `generated: true`, live only in memory, and are started by their `deckId` like any other deck. Terms and definitions are plain text (no `<`, `>` or backticks), but still insert them with `textContent`.
 
 **`public/decks/brainrot.json`**: `{ "words": ["rizz", "..."] }` (clean words only, 16 characters or fewer)
 
