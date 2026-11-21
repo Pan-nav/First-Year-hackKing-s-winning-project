@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "vendor:mediapipe": "node scripts/vendor-mediapipe.mjs",
     "check:decks": "node scripts/validate-decks.mjs"
   },
   "type": "module",
