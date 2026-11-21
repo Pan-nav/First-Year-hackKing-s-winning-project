@@ -17,12 +17,17 @@ export const CONFIG = {
   // A blade move longer than maxJump (screen widths) in one sample AND faster than maxBladeSpeed
   // (screen widths per second) is a tracking glitch, not a swipe. Real fast swipes with a dropped
   // camera frame or two stay well under 9 w/s; an id swap between two hands is ~12+ w/s.
-  maxJump: 0.3,
-  maxBladeSpeed: 9,
+  // At 60 fps a real flick can cover a third of the screen in one frame; an id swap between two
+  // hands is still 25+ w/s, so these only catch true glitches.
+  maxJump: 0.4,
+  maxBladeSpeed: 16,
   // Gaps longer than bridgeAfterMs (the tracker lost the hand, usually to motion blur mid-swipe) are
-  // swept across only if the hand was already moving at bridgeMinSpeed (w/s) towards where it reappeared.
+  // swept across if the hand was already moving at bridgeMinSpeed (w/s) towards where it reappeared,
+  // or if it reappeared within bridgeFastGapMs at an implied speed of bridgeImpliedSpeed (w/s) or more.
   bridgeAfterMs: 110,
   bridgeMinSpeed: 0.35,
+  bridgeFastGapMs: 300,
+  bridgeImpliedSpeed: 1.5,
   // Camera box (MediaPipe 0..1 coords, x already mirrored) that maps onto the full screen, so the
   // hand never has to touch the frame edge, where MediaPipe loses it. Tune at the venue.
   reach: { left: 0.08, right: 0.92, top: 0.12, bottom: 0.85 },

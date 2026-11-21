@@ -330,7 +330,12 @@ export function createEngine({ canvas }) {
       const pv = prev.v;
       const pSpeed = pv ? (Math.hypot(pv.x, pv.y) * 1000) / W : 0;
       const cos = pv && dist > 0 ? (pv.x * dx + pv.y * dy) / (Math.hypot(pv.x, pv.y) * dist) : -1;
-      if (pSpeed < CONFIG.bridgeMinSpeed || cos < 0.5) {
+      const movingThatWay = pSpeed >= CONFIG.bridgeMinSpeed && cos >= 0.5;
+      // The fastest swipes blur from the very first frame, so there is no "already moving" sample.
+      // But a hand that vanishes and reappears far away within a short gap can only have got there
+      // by moving fast, so that is a swipe too.
+      const fastShortGap = dt <= CONFIG.bridgeFastGapMs && speed >= CONFIG.bridgeImpliedSpeed;
+      if (!movingThatWay && !fastShortGap) {
         if (debugBlade) debugGaps.push({ ax: prev.x, ay: prev.y, bx: lx, by: ly, t, ok: false });
         return;
       }
