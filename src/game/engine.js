@@ -272,13 +272,12 @@ export function createEngine({ canvas }) {
   });
   canvas.parentElement?.append(menuCanvas);
   const mctx = menuCanvas.getContext('2d');
-  const menuTargetX = ({ action, w }) => action === 'again' ? W / 2 : W - w / 2 - 40;
 
   function showMenuTarget(label, action) {
     if (!CONFIG.handsFreeMenus) return;
     measureCtx.font = FONT;
     const w = Math.ceil(measureCtx.measureText(label).width) + CHIP_PAD_X * 2;
-    menuTarget = { label, action, w, h: CHIP_H, y: H * (action === 'again' ? 0.5 : 0.45), born: clock, learning: null };
+    menuTarget = { label, action, w, h: CHIP_H, born: clock, learning: null };
     if (action === 'again') menuTarget.learning = learningSummary();
   }
 
@@ -291,11 +290,11 @@ export function createEngine({ canvas }) {
     const m = menuTarget;
     const half = Math.max(0, m.w / 2 - m.h / 2);
     const r = m.h / 2 + CONFIG.hitPad;
-    const x = menuTargetX(m);
-    const y = m.y + menuBob();
+    const x = W / 2;
+    const y = menuTargetY();
     if (segSegDist2(prev.x, prev.y, here.x, here.y, x - half, y, x + half, y) <= r * r) triggerMenu(x, y);
   }
-  const menuBob = () => Math.sin(clock / 300) * 8;
+  const menuTargetY = () => H / 2 + Math.sin(clock / 300) * 8;
 
   function drawMenu(now) {
     if (menuCanvas.width !== canvas.width || menuCanvas.height !== canvas.height) {
@@ -308,8 +307,8 @@ export function createEngine({ canvas }) {
     mctx.setTransform(scale, 0, 0, scale, 0, 0);
     const m = menuTarget;
     const armed = clock - m.born >= CONFIG.menuArmMs;
-    const x = menuTargetX(m);
-    const y = m.y + menuBob();
+    const x = W / 2;
+    const y = menuTargetY();
     // the blade trail (the effects layer is hidden under the screens)
     mctx.strokeStyle = 'rgba(57, 255, 20, 0.9)';
     mctx.lineWidth = 6;
