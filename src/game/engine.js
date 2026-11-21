@@ -30,7 +30,7 @@ const CHIP_PAD_X = 26;
 const CHIP_H = Math.max(36, CONFIG.chipFontPx) + 30;
 const TIMER_EVERY = 0.25; // seconds between timer:update events
 const FIRST_SPAWN_DELAY = 1.6; // let the rule banner be read first
-const MAX_STROKE_GAP_MS = 150; // longer gaps between blade points start a new stroke
+const MAX_STROKE_GAP_MS = 260; // longer gaps between blade points start a new stroke (matches handTracker HAND_LOST_MS)
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -312,9 +312,10 @@ export function createEngine({ canvas }) {
     if (!prev || paused || (state !== 'playing' && state !== 'ending')) return;
     const dt = t - prev.t;
     if (dt <= 0 || dt > MAX_STROKE_GAP_MS) return;
-    // A huge jump in one sample is a tracking glitch (hand ids swapped, hand re-acquired), not a swipe.
-    if (Math.hypot(lx - prev.x, ly - prev.y) > CONFIG.maxJump * W) return;
     const speed = Math.hypot(lx - prev.x, ly - prev.y) / W / (dt / 1000); // screen widths per second
+    // A long jump at an impossible speed is a tracking glitch (e.g. ids swapped between two hands),
+    // not a swipe. A long jump over a dropped frame or two is a real fast swipe: sweep across it.
+    if (Math.hypot(lx - prev.x, ly - prev.y) > CONFIG.maxJump * W && speed > CONFIG.maxBladeSpeed) return;
     if (speed < CONFIG.minSliceSpeed) return;
 
     for (const it of items) {

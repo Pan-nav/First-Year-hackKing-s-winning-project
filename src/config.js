@@ -14,15 +14,22 @@ export const CONFIG = {
   logicalWidth: 1280,
   logicalHeight: 720,
   minSliceSpeed: 0.6, // blade speed (screen widths per second) needed to count as a slice
-  maxJump: 0.35, // a blade move longer than this (screen widths) in one sample starts a new stroke
+  // A blade move longer than maxJump (screen widths) in one sample AND faster than maxBladeSpeed
+  // (screen widths per second) is a tracking glitch, not a swipe. Real fast swipes with a dropped
+  // camera frame or two stay well under 9 w/s; an id swap between two hands is ~12+ w/s.
+  maxJump: 0.3,
+  maxBladeSpeed: 9,
+  // Camera box (MediaPipe 0..1 coords, x already mirrored) that maps onto the full screen, so the
+  // hand never has to touch the frame edge, where MediaPipe loses it. Tune at the venue.
+  reach: { left: 0.08, right: 0.92, top: 0.12, bottom: 0.85 },
   apexMin: 0.55, // apex height as a share of screen height
-  apexMax: 0.85,
+  apexMax: 0.8, // keeps the highest words below the HUD bar and within easy reach
   minAirtime: 2.2, // seconds; spawner never throws faster than this
   spawnIntervalStart: 1.3, // seconds between spawns in round 1
   spawnIntervalStep: 0.12, // shorter each round
   spawnIntervalMin: 0.6,
   doubleSpawnChance: 0.2, // chance a spawn throws two items (rises each round)
   chipFontPx: 38, // logical px, must stay >= 36
-  hitPad: 26, // extra logical px around each chip for slicing (hand tracking is jittery)
+  hitPad: 38, // extra logical px around each chip: hit radius 72 px, 20% more than the old 60
   drawBladeDebug: false, // thin engine blade line; the Partner's #fx trail replaces it
 };
