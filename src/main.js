@@ -42,3 +42,6 @@ bus.on('ui:start', async ({ deckId, input = defaultInput }) => {
   const [deck, brainrot] = await Promise.all([loadDeck(deckId), loadBrainrot()]);
   engine.start({ deck, brainrot });
 });
+
+// Dev shortcut: /?input=mouse&deck=sql-databases starts straight into a game (no start screen needed).
+if (params.get('deck')) bus.emit('ui:start', { deckId: params.get('deck') });
