@@ -11,17 +11,10 @@
 import { FilesetResolver, HandLandmarker, PoseLandmarker } from '@mediapipe/tasks-vision';
 import { bus } from '../bus.js';
 import { CONFIG } from '../config.js';
-import { assignIds, linkArms, mapToScreen, poseHands } from './handMapping.js';
-import { OneEuro } from './oneEuro.js';
+import { createFusion } from './fusion.js';
+import { mapToScreen, poseHands } from './handMapping.js';
 
 const INDEX_FINGERTIP = 8;
-// No point (hand or pose) for this long -> blade:end. The engine can still sweep across shorter gaps.
-const HAND_LOST_MS = 450;
-// After the hand tracker loses a hand, follow its arm with the pose tracker for at most this long.
-const POSE_ASSIST_MS = 1500;
-// Smoothing tuned for fast swipes: still hands stay steady (minCutoff), the speed estimate reacts in
-// ~3 frames (dCutoff) and fast motion is barely smoothed (beta), so the blade does not trail the hand.
-const FILTER = { minCutoff: 1.2, beta: 10, dCutoff: 5 };
 
 // Local copies (npm run vendor:mediapipe, plus public/mediapipe/pose_landmarker_lite.task) are
 // preferred so the demo works offline; otherwise the CDN is used.
@@ -31,8 +24,6 @@ const CDN_HAND =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 const CDN_POSE =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
-
-const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
 async function exists(url) {
   try {
@@ -138,16 +129,8 @@ export async function startHandTracker({ video }) {
   let { pose } = models;
 
   const debug = new URLSearchParams(location.search).has('debug');
-  const newFilter = () => new OneEuro(FILTER.minCutoff, FILTER.beta, FILTER.dCutoff);
-  const filters = [0, 1].map(() => ({ x: newFilter(), y: newFilter() }));
-  const lastSeen = [-Infinity, -Infinity]; // last point of any source
-  const handSeen = [-Infinity, -Infinity]; // last time the hand tracker itself saw the hand
-  const active = [false, false];
-  const lastPos = [null, null]; // filtered, what the engine last got
-  const lastRaw = [null, null]; // unfiltered hand-tracker fingertip
-  const seenLastFrame = [false, false];
-  const offset = [{ x: 0, y: 0 }, { x: 0, y: 0 }]; // fingertip minus that arm's pose estimate
-  let links = { 0: null, 1: null }; // blade id -> pose side 'L' | 'R'
+  // All the decisions (ids, smoothing, when pose may stand in) live in fusion.js, which is tested in Node.
+  const fusion = createFusion();
   let lastVideoTime = -1;
   let frames = 0;
   let poseFrames = 0;
@@ -157,23 +140,12 @@ export async function startHandTracker({ video }) {
   // One detection per real camera frame (requestAnimationFrame would run at the display's 144 Hz).
   const perFrame = typeof video.requestVideoFrameCallback === 'function';
 
-  const emitPoint = (id, p, t, src) => {
-    const x = filters[id].x.filter(p.x, t / 1000);
-    const y = filters[id].y.filter(p.y, t / 1000);
-    lastPos[id] = { x, y };
-    lastSeen[id] = t;
-    active[id] = true;
-    bus.emit('blade:point', src === 'pose' ? { id, x, y, t, src } : { id, x, y, t });
-  };
-
-  const endBlade = (id) => {
-    if (active[id]) bus.emit('blade:end', { id });
-    active[id] = false;
-    seenLastFrame[id] = false;
-    links = { ...links, [id]: null };
-    offset[id] = { x: 0, y: 0 };
-    filters[id].x.reset();
-    filters[id].y.reset();
+  const send = (events) => {
+    for (const e of events) {
+      if (e.type === 'end') bus.emit('blade:end', { id: e.id });
+      else bus.emit('blade:point', e.src ? { id: e.id, x: e.x, y: e.y, t: e.t, src: e.src } : { id: e.id, x: e.x, y: e.y, t: e.t });
+      if (e.src === 'pose') poseFrames++;
+    }
   };
 
   function detect() {
@@ -181,34 +153,12 @@ export async function startHandTracker({ video }) {
     const result = hand.detectForVideo(video, now);
     // Mirror and map the camera's inner reach box onto the screen (handMapping.js explains why).
     const tips = result.landmarks.slice(0, 2).map((lm) => mapToScreen(lm[INDEX_FINGERTIP]));
-    const ids = assignIds(tips, { active, lastPos });
-    const seen = [false, false];
-    const visible = [];
+    const plan = fusion.hands(now, tips);
 
-    // Lost since last frame: the smoothed blade lags the fingertip, so first send the last real
-    // position (resetting the filter there), so the stroke reaches where the hand really was.
-    const lostNow = [0, 1].filter((id) => seenLastFrame[id] && !ids.includes(id) && lastRaw[id]);
-    for (const id of lostNow) {
-      filters[id].x.reset();
-      filters[id].y.reset();
-      emitPoint(id, lastRaw[id], handSeen[id] + 8, 'hand');
-    }
-
-    tips.forEach((tip, i) => {
-      const id = ids[i];
-      emitPoint(id, tip, now, 'hand');
-      handSeen[id] = now;
-      lastRaw[id] = tip;
-      seen[id] = true;
-      visible.push({ id, x: tip.x, y: tip.y });
-    });
-
-    // Pose costs ~10-20 ms a frame, so run it every frame only while some hand is lost, every other
-    // frame while hands are tracked (keeps it locked on and the offsets fresh), and not at all idle.
-    const handLost = [0, 1].some((id) => active[id] && !seen[id]);
-    const runPose = pose && (handLost || (active.some(Boolean) && frames % 2 === 0));
-    if (runPose) {
-      let arms = [];
+    // Pose costs ~10-20 ms a frame: every frame while a hand is lost or on pose, every other frame
+    // while hands are tracked (keeps it locked on and the fingertip offsets fresh), never when idle.
+    let arms = null;
+    if (pose && (plan.needPose || (plan.wantPose && frames % 2 === 0))) {
       try {
         arms = poseHands(pose.detectForVideo(video, now).landmarks?.[0]);
       } catch (err) {
@@ -216,32 +166,8 @@ export async function startHandTracker({ video }) {
         pose.close();
         pose = null;
       }
-      if (arms.length) {
-        links = linkArms(visible, arms, links);
-        // Learn where the real fingertip sits relative to the arm's estimate while both are visible.
-        for (const v of visible) {
-          const arm = arms.find((a) => a.side === links[v.id]);
-          if (!arm) continue;
-          const o = offset[v.id];
-          o.x = Math.max(-0.15, Math.min(0.15, o.x * 0.8 + (v.x - arm.x) * 0.2));
-          o.y = Math.max(-0.15, Math.min(0.15, o.y * 0.8 + (v.y - arm.y) * 0.2));
-        }
-        // A hand the hand tracker lost (blur, hands touching) follows its arm for a while. Pose never
-        // starts a blade, and ignores an arm outside the play area (e.g. hanging by the side).
-        for (const id of [0, 1]) {
-          if (!active[id] || seen[id] || !links[id] || now - handSeen[id] > POSE_ASSIST_MS) continue;
-          const arm = arms.find((a) => a.side === links[id]);
-          if (!arm?.inside) continue;
-          emitPoint(id, { x: clamp01(arm.x + offset[id].x), y: clamp01(arm.y + offset[id].y) }, now, 'pose');
-          poseFrames++;
-        }
-      }
     }
-
-    for (const id of [0, 1]) {
-      seenLastFrame[id] = seen[id];
-      if (active[id] && now - lastSeen[id] > HAND_LOST_MS) endBlade(id);
-    }
+    send(fusion.finish(arms));
 
     frames++;
     if (debug && frames % 60 === 0) {
@@ -272,8 +198,7 @@ export async function startHandTracker({ video }) {
     stopped = true;
     if (perFrame) video.cancelVideoFrameCallback(handle);
     else cancelAnimationFrame(handle);
-    endBlade(0);
-    endBlade(1);
+    send(fusion.stop());
     hand.close();
     pose?.close();
     stream.getTracks().forEach((t) => t.stop());

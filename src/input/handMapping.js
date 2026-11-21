@@ -32,7 +32,7 @@ export function poseHands(lm, reach = CONFIG.reach) {
     const w = lm[POSE[side].wrist];
     const i = lm[POSE[side].index];
     if (!w || (w.visibility ?? 1) < 0.5) continue;
-    const base = i && (i.visibility ?? 1) >= 0.3 ? { x: i.x + 0.6 * (i.x - w.x), y: i.y + 0.6 * (i.y - w.y) } : w;
+    const base = i && (i.visibility ?? 1) >= 0.3 ? { x: i.x + 0.4 * (i.x - w.x), y: i.y + 0.4 * (i.y - w.y) } : w;
     const p = mapToScreen(base, reach, false);
     out.push({ side, x: p.x, y: p.y, inside: p.x > -0.1 && p.x < 1.1 && p.y > -0.15 && p.y < 1.03 });
   }

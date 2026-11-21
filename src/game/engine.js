@@ -29,6 +29,7 @@ const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 const CHIP_PAD_X = 26;
 const CHIP_H = Math.max(36, CONFIG.chipFontPx) + 30;
 const TIMER_EVERY = 0.25; // seconds between timer:update events
+const BAG_SIZE = 8; // spawn kinds are dealt from shuffled bags of this size (see refillBag)
 const FIRST_SPAWN_DELAY = 1.6; // let the rule banner be read first
 const MAX_STROKE_GAP_MS = 480; // longer gaps between blade points start a new stroke (handTracker HAND_LOST_MS is 450)
 
@@ -120,6 +121,7 @@ export function createEngine({ canvas }) {
   let wrongSliced = new Map();
   let diff = {};
   let spawned = { correct: 0, wrong: 0, brainrot: 0 }; // this round's spawn mix (logged at round end)
+  let bag = []; // shuffled kinds still to deal this round (see refillBag)
   let nextId = 1;
   let cards = []; // definition cards: { x, y, w, h, title, lines, color, born }
   let banner = null; // round-start review callout: { title, sub, born }
@@ -193,6 +195,7 @@ export function createEngine({ canvas }) {
     misses = 0; // a fresh round forgives partial miss progress
     spawnTimer = FIRST_SPAWN_DELAY;
     spawned = { correct: 0, wrong: 0, brainrot: 0 };
+    bag = [];
     missed = new Map();
     wrongSliced = new Map();
     diff = difficulty(i);
@@ -257,16 +260,39 @@ export function createEngine({ canvas }) {
     return weighted ? pickWeighted(from, pickStats) : from[Math.floor(Math.random() * from.length)];
   }
 
+  // Spawn kinds are dealt from a shuffled bag of BAG_SIZE, so every stretch of the round has the same
+  // mix (pure chance gave rounds like 8 brainrot vs 4 correct). With the default chances a bag is
+  // 4 correct, 2 wrong, 2 brainrot; later rounds trade a correct for a wrong.
+  function refillBag() {
+    const b = brainrot.length ? Math.max(1, Math.round(BAG_SIZE * diff.brainrot)) : 0;
+    const w = Math.round(BAG_SIZE * diff.wrong);
+    bag = [
+      ...Array(Math.max(1, BAG_SIZE - b - w)).fill('correct'),
+      ...Array(w).fill('wrong'),
+      ...Array(b).fill('brainrot'),
+    ];
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+
   function spawnOne() {
     const round = deck.rounds[roundIndex];
-    const r = Math.random();
-    // Every round shows at least minBrainrotPerRound brainrot words: if chance has not produced the
-    // first one by 1/3 of the round (the second by 2/3), the next spawn is forced to be brainrot.
+    if (!bag.length) refillBag();
+    // Safety net: every round shows at least minBrainrotPerRound brainrot words. If the bag has not
+    // dealt the first by 1/3 of the round (the second by 2/3), take one out of the bag now.
     const need = CONFIG.minBrainrotPerRound;
-    const due = spawned.brainrot < need && roundTime >= (CONFIG.roundSeconds * (spawned.brainrot + 1)) / (need + 1);
-    let kind = 'correct';
-    if (brainrot.length && (due || r < diff.brainrot)) kind = 'brainrot';
-    else if (r < diff.brainrot + diff.wrong) kind = 'wrong';
+    const due =
+      brainrot.length && spawned.brainrot < need && roundTime >= (CONFIG.roundSeconds * (spawned.brainrot + 1)) / (need + 1);
+    let kind;
+    if (due) {
+      const i = bag.indexOf('brainrot');
+      if (i >= 0) bag.splice(i, 1);
+      kind = 'brainrot';
+    } else {
+      kind = bag.pop();
+    }
     spawned[kind]++;
     const pool = kind === 'brainrot' ? brainrot : round[kind];
     const term = pickTerm(pool, kind !== 'brainrot');
@@ -328,7 +354,7 @@ export function createEngine({ canvas }) {
       trails.set(id, tr);
     }
     const prev = blades.get(id);
-    const here = { x: lx, y: ly, t, v: null };
+    const here = { x: lx, y: ly, t, v: null, src };
     blades.set(id, here);
     if (!prev || paused || (state !== 'playing' && state !== 'ending')) return;
     const dt = t - prev.t;
@@ -338,23 +364,33 @@ export function createEngine({ canvas }) {
     const dist = Math.hypot(dx, dy);
     here.v = { x: dx / dt, y: dy / dt }; // px per ms, used to judge the next gap
     const speed = dist / W / (dt / 1000); // screen widths per second
+    const pv = prev.v;
+    const cosPrev = pv && dist > 0 ? (pv.x * dx + pv.y * dy) / (Math.hypot(pv.x, pv.y) * dist || 1) : -1;
+    const ignore = () => {
+      here.v = null; // a correction says nothing about where the hand is heading
+    };
     // A long jump at an impossible speed is a tracking glitch (e.g. ids swapped between two hands).
-    if (dist > CONFIG.maxJump * W && speed > CONFIG.maxBladeSpeed) return;
+    if (dist > CONFIG.maxJump * W && speed > CONFIG.maxBladeSpeed) return ignore();
+    // Switching between the hand tracker and the body tracker (src 'pose'): the two disagree by a few
+    // centimetres, and pose lags in a fast swipe. A switch jump that carries on in the direction of
+    // travel is the blade catching up with the real swipe, so it slices; a sideways or backwards one is
+    // just the estimate being corrected, so it does not.
+    if ((prev.src === 'pose') !== (src === 'pose') && dist > CONFIG.switchMaxJump * W && cosPrev < 0.5) return ignore();
+    // One pose frame jumping a third of the screen is the body tracker glitching on a blurred arm.
+    if (prev.src === 'pose' && src === 'pose' && dist > CONFIG.poseMaxStep * W) return ignore();
     // A long gap means the tracker lost the hand, usually to motion blur in a fast swipe. Sweep across
     // it only if the hand was already moving fast in roughly this direction; otherwise it is a hand
     // that reappeared somewhere else, which must not slice everything in between.
     if (dt > CONFIG.bridgeAfterMs) {
-      const pv = prev.v;
       const pSpeed = pv ? (Math.hypot(pv.x, pv.y) * 1000) / W : 0;
-      const cos = pv && dist > 0 ? (pv.x * dx + pv.y * dy) / (Math.hypot(pv.x, pv.y) * dist) : -1;
-      const movingThatWay = pSpeed >= CONFIG.bridgeMinSpeed && cos >= 0.5;
+      const movingThatWay = pSpeed >= CONFIG.bridgeMinSpeed && cosPrev >= 0.5;
       // The fastest swipes blur from the very first frame, so there is no "already moving" sample.
       // But a hand that vanishes and reappears far away within a short gap can only have got there
       // by moving fast, so that is a swipe too.
       const fastShortGap = dt <= CONFIG.bridgeFastGapMs && speed >= CONFIG.bridgeImpliedSpeed;
       if (!movingThatWay && !fastShortGap) {
         if (debugBlade) debugGaps.push({ ax: prev.x, ay: prev.y, bx: lx, by: ly, t, ok: false });
-        return;
+        return ignore();
       }
       if (debugBlade) debugGaps.push({ ax: prev.x, ay: prev.y, bx: lx, by: ly, t, ok: true });
     }
