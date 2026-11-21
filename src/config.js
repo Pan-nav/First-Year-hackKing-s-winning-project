@@ -9,6 +9,9 @@ export const CONFIG = {
   pointsCorrect: 10,
   penaltyWrong: 5,
   penaltyBrainrot: 15,
+  // After a brainrot slice play freezes this long while src/ui/effects.js shows a full-screen takeover
+  // (nothing falls or ticks behind it, so covering the screen costs the player nothing extra). 0 = off.
+  brainrotFreezeMs: 1500,
   comboWindowMs: 1500, // correct slices this close together build the combo
   comboMax: 5, // multiplier cap
   wrongChance: 0.25, // share of spawned items that are plausible-but-wrong terms (rises to 0.35)

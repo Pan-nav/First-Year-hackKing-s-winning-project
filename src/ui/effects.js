@@ -1,4 +1,5 @@
 import { bus } from '../bus.js';
+import { CONFIG } from '../config.js';
 
 export function initFx(canvas) {
   const ctx = canvas.getContext('2d');
@@ -26,46 +27,115 @@ export function initFx(canvas) {
   }
   bus.on('game:start', () => { lastComboShown = 0; comboFlash.hidden = true; });
   bus.on('round:start', () => { lastComboShown = 0; });
-  let deepFryTimer;
   let shakeTimer;
-  let consequenceTimer;
+  let takeoverTimer;
   // Original emoji/CSS interpretations: no external meme artwork or audio.
+  // style picks the big emoji's animation; extra is the emoji that rains (or bursts) around it.
   const consequences = {
-    'rizz': { emoji: '💔', title: 'RIZZ REJECTED', subtitle: '-1000 AURA (JUST KIDDING)', style: 'hearts' },
-    'skibidi': { emoji: '🚽', title: 'SKIBIDI ALERT', subtitle: 'THE TOILET HAS ENTERED THE CHAT', style: 'bounce' },
-    'sigma': { emoji: '😎', title: 'NOT VERY SIGMA', subtitle: 'THE BRAIN HAS SUNGLASSES NOW', style: 'cool' },
-    'ohio': { emoji: '🙃', title: 'ONLY IN OHIO', subtitle: 'YOUR WORLD IS A LITTLE SIDEWAYS', style: 'tilt' },
-    'aura': { emoji: '💀', title: '-9999 AURA', subtitle: 'YOUR VIBES HAVE BEEN AUDITED', style: 'bounce' },
-    'aura farming': { emoji: '💀', title: '-9999 AURA', subtitle: 'YOUR VIBES HAVE BEEN AUDITED', style: 'bounce' },
-    'gyatt': { emoji: '🍟', title: 'EXTRA CRISPY', subtitle: 'MAXIMUM DEEP FRY', style: 'fry' },
-    'tralalero': { emoji: '🦈', title: 'SHARK INVASION', subtitle: 'TRALALERO SWIMS BY', style: 'swim' },
-    'cappuccina': { emoji: '☕', title: 'COFFEE BREAK!', subtitle: 'THE CUP IS DANCING', style: 'tilt' },
-    'tung tung sahur': { emoji: '🪵', title: 'TUNG TUNG TUNG', subtitle: 'BONK! TIME TO REVISE', style: 'bounce' },
-    'bombardiro': { emoji: '🐊', title: 'CROCODILE FLYBY', subtitle: 'PIXEL CLOUDS INCOMING', style: 'swim' },
+    'rizz': { emoji: '💔', title: 'RIZZ REJECTED', subtitle: '-1000 AURA (JUST KIDDING)', style: 'pulse', extra: '💔' },
+    'skibidi': { emoji: '🚽', title: 'SKIBIDI ALERT', subtitle: 'THE TOILET HAS ENTERED THE CHAT', style: 'bounce', extra: '🧻' },
+    'sigma': { emoji: '😎', title: 'NOT VERY SIGMA', subtitle: 'THE BRAIN HAS SUNGLASSES NOW', style: 'pulse', extra: '🕶️' },
+    'ohio': { emoji: '🙃', title: 'ONLY IN OHIO', subtitle: 'YOUR WORLD IS A LITTLE SIDEWAYS', style: 'tilt', extra: '🌽' },
+    'aura': { emoji: '💀', title: '-9999 AURA', subtitle: 'YOUR VIBES HAVE BEEN AUDITED', style: 'bounce', extra: '💀' },
+    'aura farming': { emoji: '💀', title: '-9999 AURA', subtitle: 'YOUR VIBES HAVE BEEN AUDITED', style: 'bounce', extra: '💀' },
+    'gyatt': { emoji: '🍟', title: 'EXTRA CRISPY', subtitle: 'MAXIMUM DEEP FRY', style: 'bounce', extra: '🍟' },
+    'tralalero': { emoji: '🦈', title: 'TRALALERO TRALALA', subtitle: 'A SHARK IN SNEAKERS SWAM OFF WITH YOUR FOCUS', style: 'swim', extra: '👟' },
+    'bombardiro': { emoji: '🐊', title: 'BOMBARDIRO CROCODILO', subtitle: 'BOMBS AWAY ON YOUR REVISION', style: 'fly', extra: '💣' },
+    'cappuccina': { emoji: '☕', title: 'BALLERINA CAPPUCCINA', subtitle: 'SHE PIROUETTED THROUGH YOUR BRAIN CELLS', style: 'spin', extra: '✨' },
+    'tung tung sahur': { emoji: '🪵', title: 'TUNG TUNG TUNG SAHUR', subtitle: 'BONK! TIME TO REVISE', style: 'bonk', extra: '💥' },
   };
-  const consequenceOverlay = document.createElement('div');
-  consequenceOverlay.id = 'brainrot-consequence';
-  consequenceOverlay.setAttribute('aria-live', 'polite');
-  consequenceOverlay.setAttribute('aria-atomic', 'true');
-  consequenceOverlay.hidden = true;
-  stage.append(consequenceOverlay);
-  function showConsequence(term) {
-    const effect = consequences[String(term ?? '').trim().toLowerCase()] || {
-      emoji: '🧠', title: 'BRAINROT DETECTED', subtitle: 'KEEP THE KNOWLEDGE!', style: 'bounce'
+  // Full-screen takeover after a brainrot slice. The engine freezes play for CONFIG.brainrotFreezeMs
+  // at the same moment, so covering the whole screen hides nothing that is still moving.
+  // Tailwind utilities; the keyframes live in src/styles/tailwind.css. Only transform and opacity are
+  // animated (no filters), so it stays cheap over the camera feed. Class strings must stay literal so
+  // Tailwind can find them.
+  const EMOJI_ANIM = {
+    bonk: 'animate-rot-bonk origin-bottom',
+    swim: 'animate-rot-swim',
+    fly: 'animate-rot-fly',
+    spin: 'animate-rot-spin',
+    bounce: 'animate-rot-bounce',
+    tilt: 'animate-rot-tilt',
+    pulse: 'animate-rot-pulse',
+  };
+  const TRAVELS = new Set(['swim', 'fly']); // these cross the whole screen during the takeover
+  const DROP_LEFTS = { fly: [88, 74, 60, 46, 32, 18], other: [10, 82, 28, 66, 46, 90] }; // fly: bombs follow the croc
+  const BURSTS = [[58, 30], [34, 22], [62, 14]]; // bonk: one impact burst per swing (left%, top%)
+  const takeover = document.createElement('div');
+  takeover.id = 'rot-takeover';
+  takeover.className = 'pointer-events-none absolute inset-0 z-10 overflow-hidden';
+  takeover.setAttribute('aria-live', 'assertive');
+  takeover.setAttribute('aria-atomic', 'true');
+  takeover.hidden = true;
+  stage.append(takeover);
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (text != null) node.textContent = text; // textContent: terms are never parsed as HTML
+    return node;
+  };
+  const hideTakeover = () => {
+    clearTimeout(takeoverTimer);
+    takeover.hidden = true;
+    takeover.replaceChildren();
+  };
+  function showTakeover(term, points) {
+    const name = String(term ?? '').trim();
+    const fx = consequences[name.toLowerCase()] || {
+      emoji: '🧠', title: `${(name || 'BRAINROT').toUpperCase()}?!`, subtitle: 'THAT IS BRAINROT. KEEP THE KNOWLEDGE!', style: 'pulse', extra: '💀',
     };
-    // Set textContent instead of interpolating external term text into HTML.
-    consequenceOverlay.replaceChildren();
-    for (const [className, value] of [['consequence-emoji', effect.emoji], ['consequence-title', effect.title], ['consequence-subtitle', effect.subtitle]]) {
-      const el = document.createElement('span'); el.className = className; el.textContent = value; consequenceOverlay.append(el);
+    const ms = Math.max(600, Number(CONFIG.brainrotFreezeMs) || 1500);
+    const marquee = ' ⚠ BRAINROT DETECTED ⚠ '.repeat(8);
+    const strip = (place, reverse) => {
+      const band = el('div', `absolute -left-[5%] w-[110%] bg-rot-yellow py-[0.7vh] font-arcade text-[clamp(10px,1.6vw,20px)] text-black whitespace-nowrap shadow-[0_0_24px_#ff59be] ${place}`);
+      const run = el('div', 'w-max animate-rot-marquee', marquee + marquee);
+      if (reverse) run.style.animationDirection = 'reverse';
+      band.append(run);
+      return band;
+    };
+    const emoji = el('span', `block leading-none text-[min(32vh,30vw)] ${EMOJI_ANIM[fx.style] || EMOJI_ANIM.pulse}`, fx.emoji);
+    if (TRAVELS.has(fx.style)) emoji.style.animationDuration = `${ms}ms`;
+    const pts = Number(points);
+    const center = el('div', 'absolute inset-0 flex flex-col items-center justify-center gap-[1.5vh] px-[4vw] text-center animate-rot-pop');
+    center.append(
+      emoji,
+      el('span', 'font-arcade text-[clamp(18px,4vw,56px)] leading-tight text-rot-yellow [text-shadow:0.08em_0.08em_0_#b5286c] animate-rot-glitch', fx.title),
+      el('span', 'font-mono font-bold text-[clamp(14px,2vw,26px)] tracking-wide text-white', fx.subtitle),
+      el('span', 'font-arcade text-[clamp(12px,2.2vw,28px)] text-rot-pink', `${Number.isFinite(pts) && pts ? `${pts} POINTS · ` : ''}-1 🧠`),
+    );
+    const layers = [
+      el('div', 'absolute inset-0 bg-[radial-gradient(ellipse_at_center,#3b0a52f0_0%,#0b0214f7_72%)]'),
+      el('div', 'absolute inset-0 opacity-25 bg-[repeating-linear-gradient(120deg,#ff4f00_0_14px,transparent_14px_28px)]'),
+      strip('top-[9%] -rotate-2', false),
+      strip('bottom-[9%] rotate-2', true),
+      center,
+    ];
+    if (!reduced.matches) {
+      if (fx.style === 'bonk') {
+        BURSTS.forEach(([left, top], i) => {
+          const burst = el('span', 'absolute text-[clamp(60px,16vh,180px)] animate-rot-burst', fx.extra);
+          Object.assign(burst.style, { left: `${left}%`, top: `${top}%`, animationDelay: `${0.23 + 0.42 * i}s` });
+          layers.push(burst);
+        });
+      } else {
+        (DROP_LEFTS[fx.style] || DROP_LEFTS.other).forEach((left, i) => {
+          const drop = el('span', 'absolute top-0 text-[clamp(32px,8vh,90px)] animate-rot-drop', fx.extra);
+          Object.assign(drop.style, { left: `${left}%`, animationDelay: `${0.12 * i}s` });
+          layers.push(drop);
+        });
+      }
     }
-    // Clear the class and force a reflow so the animation restarts on back-to-back slices.
-    consequenceOverlay.className = '';
-    consequenceOverlay.hidden = false;
-    void consequenceOverlay.offsetWidth;
-    consequenceOverlay.className = `consequence-${effect.style}`;
-    clearTimeout(consequenceTimer);
-    consequenceTimer = setTimeout(() => { consequenceOverlay.hidden = true; consequenceOverlay.className = ''; }, 1450);
+    // Fresh children and a re-added class restart every animation, even for the same character twice.
+    clearTimeout(takeoverTimer);
+    takeover.classList.remove('animate-rot-takeover');
+    takeover.replaceChildren(...layers);
+    takeover.style.animationDuration = `${ms}ms`;
+    takeover.hidden = false;
+    void takeover.offsetWidth;
+    takeover.classList.add('animate-rot-takeover');
+    takeoverTimer = setTimeout(hideTakeover, ms);
   }
+  bus.on('game:start', hideTakeover);
   const resize = () => {
     const ratio = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(canvas.clientWidth * ratio);
@@ -100,12 +170,7 @@ export function initFx(canvas) {
         clearTimeout(shakeTimer); shakeTimer = setTimeout(() => stage.classList.remove('shake'), 380);
       }
     }
-    if (kind === 'brainrot') showConsequence(term);
-    if (kind === 'brainrot' && !reduced.matches) {
-      stage.classList.add('deepfried');
-      clearTimeout(deepFryTimer);
-      deepFryTimer = setTimeout(() => stage.classList.remove('deepfried'), 2000);
-    }
+    if (kind === 'brainrot') showTakeover(term, points);
   });
   let last = performance.now();
   function frame(now) {

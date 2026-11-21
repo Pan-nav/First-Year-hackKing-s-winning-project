@@ -108,6 +108,7 @@ export function createEngine({ canvas }) {
   let timerAcc = 0;
   let spawnTimer = 0;
   let clock = 0; // game time in ms, frozen while paused
+  let freezeLeft = 0; // seconds of brainrot hit-stop left (CONFIG.brainrotFreezeMs): no physics, timer or slicing
   let score = 0;
   let combo = 0;
   let lastCorrectAt = -Infinity;
@@ -529,7 +530,7 @@ export function createEngine({ canvas }) {
       checkMenuHit(prev, here);
       return;
     }
-    if (!prev || paused || (state !== 'playing' && state !== 'ending' && state !== 'warmup')) return;
+    if (!prev || paused || freezeLeft > 0 || (state !== 'playing' && state !== 'ending' && state !== 'warmup')) return;
     const dt = t - prev.t;
     if (dt <= 0 || dt > MAX_STROKE_GAP_MS) return;
     const dx = lx - prev.x;
@@ -621,7 +622,10 @@ export function createEngine({ canvas }) {
     const def = it.kind === 'brainrot' ? '' : definition(it.term);
     bus.emit('item:slice', { term: it.term, kind: it.kind, x: it.x / W, y: it.y / H, points, combo, definition: def });
     bus.emit('score:update', { score, combo });
-    if (it.kind === 'brainrot') loseLife();
+    if (it.kind === 'brainrot') {
+      loseLife();
+      if (state !== 'over') freezeLeft = CONFIG.brainrotFreezeMs / 1000;
+    }
   }
 
   function split(it, dx, dy) {
@@ -955,7 +959,10 @@ export function createEngine({ canvas }) {
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (!paused && state !== 'idle') update(dt);
+    if (!paused && state !== 'idle') {
+      if (freezeLeft > 0) freezeLeft -= dt;
+      else update(dt);
+    }
     draw(now);
     requestAnimationFrame(frame);
   }
@@ -997,6 +1004,7 @@ export function createEngine({ canvas }) {
       menuTarget = null;
       menuTrails.clear();
       paused = false;
+      freezeLeft = 0;
       blades.clear();
       bus.emit('game:start', { deckId: deck.id, deckTitle: deck.title, totalRounds: deck.rounds.length });
       bus.emit('score:update', { score, combo });

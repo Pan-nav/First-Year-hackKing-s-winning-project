@@ -82,11 +82,11 @@ export async function initScreens() {
   };
   const showStart = () => {
     deckId = decks.some(d => d.id === deckId) ? deckId : (decks[0]?.id || '');
-    setScreen('start', `<div class="eyebrow">◈ THE REVISION ARCADE ◈</div><h1 class="game-title glitch-title" data-text="SLICE THE ROT">SLICE THE ROT</h1><p class="tagline">SLICE THE ROT. KEEP THE KNOWLEDGE.</p><p class="lead">Cut the right terms. Dodge the distractions. Don't feed the brainrot.</p><h2>01 // SELECT YOUR DECK</h2><div class="deck-grid">${decks.map(d => `<button class="deck-choice ${d.id === deckId ? 'selected' : ''}" data-deck="${escapeHtml(d.id)}" aria-pressed="${d.id === deckId}"><strong>${escapeHtml(d.title)}</strong><small>${escapeHtml(d.description)}</small></button>`).join('')}</div><h2>02 // CAMERA PLAY</h2><p class="lead">📷 Your arms are the blades. Allow camera access when prompted.</p><div class="start-actions"><button class="primary-button coin-button" data-action="start" ${deckId ? '' : 'disabled'}>▶ INSERT COIN <span>START GAME</span></button><button class="secondary-button" data-action="tutorial">? HOW TO PLAY</button></div><p class="fine-print">Stand back so your arms are in frame. Camera permission required.</p>${import.meta.env.VITE_ENABLE_JOB_SPEC === 'true' ? '<div class="job-entry"><button class="secondary-button job-entry-button" data-action="job-open">✦ PASTE A JOB SPEC</button></div>' : ''}`, start);
+    setScreen('start', `<div class="eyebrow">◈ THE REVISION ARCADE ◈</div><h1 class="game-title glitch-title" data-text="SLICE THE ROT">SLICE THE ROT</h1><p class="tagline">SLICE THE ROT. KEEP THE KNOWLEDGE.</p><p class="lead">Cut the right terms. Dodge the distractions. Don't feed the brainrot.</p><h2>01 // SELECT YOUR DECK</h2><div class="deck-grid">${decks.map(d => `<button class="deck-choice ${d.id === deckId ? 'selected' : ''}" data-deck="${escapeHtml(d.id)}" aria-pressed="${d.id === deckId}"><strong>${escapeHtml(d.title)}</strong><small>${escapeHtml(d.description)}</small></button>`).join('')}</div><h2>02 // CAMERA PLAY</h2><p class="lead">📷 Your arms are the blades. Allow camera access when prompted.</p><div class="start-actions"><button class="primary-button coin-button" data-action="start" ${deckId ? '' : 'disabled'}>▶ INSERT COIN <span>START GAME</span></button><button class="secondary-button" data-action="tutorial">? HOW TO PLAY</button></div><p class="fine-print">Stand back so your arms are in frame. Camera permission required.</p>${import.meta.env.VITE_ENABLE_JOB_SPEC !== 'false' ? '<div class="job-entry"><button class="secondary-button job-entry-button" data-action="job-open">✦ PASTE A JOB SPEC</button></div>' : ''}`, start);
   };
   // Job-spec generation is owned by the engine; this panel only sends and receives bus events.
   const showJobSpec = () => {
-    setScreen('job-spec', `<div class="eyebrow">CUSTOM REVISION // JOB SPEC</div><h1>PASTE A JOB SPEC</h1><p class="lead">Turn a job description into a playable revision deck.</p><form id="job-spec-form" class="job-spec-form"><label for="job-description">JOB DESCRIPTION</label><textarea id="job-description" rows="9" maxlength="25000" required placeholder="Paste the internship or job description here..."></textarea><p class="fine-print" id="job-key-status" role="status">${keyPreloaded ? 'Gemini key configured for this dev session.' : 'Gemini key not configured. Add VITE_GEMINI_API_KEY to .env.local and restart the dev server.'}</p><div class="job-spec-actions"><button type="submit" class="primary-button">⚡ GENERATE</button><button type="button" class="secondary-button" data-action="job-back">← BACK</button></div><p id="job-spec-message" role="alert" aria-live="polite"></p></form>`, null);
+    setScreen('job-spec', `<div class="eyebrow">CUSTOM REVISION // JOB SPEC</div><h1>PASTE A JOB SPEC</h1><p class="lead">Turn a job description into a playable revision deck.</p><form id="job-spec-form" class="job-spec-form"><label for="job-description">JOB DESCRIPTION</label><textarea id="job-description" rows="9" maxlength="25000" required placeholder="Paste the internship or job description here..."></textarea>${keyPreloaded ? '' : '<label for="job-api-key">API KEY</label><input id="job-api-key" type="password" required autocomplete="off" spellcheck="false" placeholder="Paste a Gemini or Claude API key"/><p class="fine-print">Kept in memory only, never saved.</p>'}<div class="job-spec-actions"><button type="submit" class="primary-button">⚡ GENERATE</button><button type="button" class="secondary-button" data-action="job-back">← BACK</button></div><p id="job-spec-message" role="alert" aria-live="polite"></p></form>`, null);
     root.querySelector('#job-spec-form').addEventListener('submit', event => {
       event.preventDefault();
       const jobTextField = root.querySelector('#job-description');
@@ -95,12 +95,16 @@ export async function initScreens() {
         root.querySelector('#job-spec-message').textContent = 'Enter a job description.';
         return;
       }
-      if (!keyPreloaded) {
-        root.querySelector('#job-spec-message').textContent = 'No Gemini key loaded. Set VITE_GEMINI_API_KEY in .env.local and restart npm run dev.';
+      // The key field only exists when .env.local has no key (main.js emits deck:keyStatus at startup).
+      const keyField = root.querySelector('#job-api-key');
+      const apiKey = keyField ? keyField.value.trim() : '';
+      if (keyField && !apiKey) {
+        root.querySelector('#job-spec-message').textContent = 'Enter an API key.';
         return;
       }
       // EventTarget delivery is synchronous; do not retain the key in component state.
-      bus.emit('ui:generateDeck', { jobText });
+      bus.emit('ui:generateDeck', apiKey ? { jobText, apiKey } : { jobText });
+      if (keyField) keyField.value = '';
     });
   };
   const showGenerating = () => {
@@ -191,10 +195,6 @@ export async function initScreens() {
   });
   bus.on('deck:keyStatus', ({ hasKey } = {}) => {
     keyPreloaded = hasKey === true;
-    const status = root.querySelector('#job-key-status');
-    if (status) status.textContent = keyPreloaded
-      ? 'Gemini key configured for this dev session.'
-      : 'Gemini key not configured. Add VITE_GEMINI_API_KEY to .env.local and restart the dev server.';
   });
   bus.on('deck:generating', showGenerating);
   bus.on('deck:ready', showDeckReady);

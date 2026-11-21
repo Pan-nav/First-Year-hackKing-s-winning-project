@@ -43,7 +43,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `game:start` | `{ deckId, deckTitle, totalRounds }` |
 | `round:start` | `{ index, total, rule, seconds, review }` (index starts at 0; `review` is the terms in this round the player got wrong in any earlier game or round, possibly empty) |
 | `timer:update` | `{ secondsLeft }` (about 4 times a second) |
-| `item:slice` | `{ term, kind, x, y, points, combo, definition }` (`points` can be negative; `definition` is `''` for brainrot) |
+| `item:slice` | `{ term, kind, x, y, points, combo, definition }` (`points` can be negative; `definition` is `''` for brainrot). After a brainrot slice the engine freezes play (physics, timer, slicing) for `CONFIG.brainrotFreezeMs` while `src/ui/effects.js` shows a full-screen takeover for the same time. |
 | `item:miss` | `{ term, definition }` (a correct term fell off the bottom) |
 | `score:update` | `{ score, combo }` |
 | `lives:update` | `{ lives, max }` |
