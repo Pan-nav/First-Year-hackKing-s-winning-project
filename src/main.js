@@ -5,6 +5,7 @@ import { createEngine } from './game/engine.js';
 import { startHandTracker } from './input/handTracker.js';
 import { startMouseBlade } from './input/mouseBlade.js';
 import { getTermStats, saveTermStats } from './storage.js';
+import { initMusic } from './music.js';
 import { initAudio } from './ui/audio.js';
 import { initFx } from './ui/effects.js';
 import { initHud } from './ui/hud.js';
@@ -22,6 +23,7 @@ initScreens();
 initHud();
 initFx(document.getElementById('fx'));
 initAudio();
+initMusic();
 
 // The running input is kept between games: restarting the camera and rebuilding the hand model
 // on every PLAY AGAIN costs seconds. It is only swapped when the requested kind changes.

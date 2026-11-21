@@ -1,6 +1,10 @@
 // Shared tunables. OWNER edits these while tuning. PARTNER may read them but not change them.
 export const CONFIG = {
   maxLives: 3,
+  warmupSeconds: 5, // practice targets before round 1 (no points, no lives); 0 turns it off
+  handsFreeMenus: true, // swipe-to-select NEXT ROUND / PLAY AGAIN targets over the summary screens
+  menuArmMs: 1200, // a menu target ignores swipes for this long after it appears (no accidental skips)
+  music: true, // looping chiptune (src/music.js); follows the mute button / M key
   roundSeconds: 20,
   pointsCorrect: 10,
   penaltyWrong: 5,

@@ -48,7 +48,8 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `score:update` | `{ score, combo }` |
 | `lives:update` | `{ lives, max }` |
 | `round:end` | `{ index, missed: [{ term, definition }], wrongSliced: [{ term, definition }] }` |
-| `game:over` | `{ score, rounds, termStats, weakTerms }` |
+| `game:over` | `{ score, rounds, termStats, weakTerms, learning }` (`learning`: `{ accuracy, correctSliced, correctTotal, wrongAvoided, wrongTotal, improved: [{ term, definition }] }`; `accuracy` is the % of right calls, or null; `improved` = terms got wrong in an earlier game and right in this one) |
+| `warmup:start` / `warmup:end` | `{ seconds }` / `{}`: 5 s of practice "SLICE ME" targets before round 1 (no score, no lives). Their slices arrive as `item:slice` with `kind: 'correct'`, `points: 0`. |
 | `deck:generating` | `{}` (a `ui:generateDeck` request started; usually 10 to 25 s, gives up after about 55 s) |
 | `deck:ready` | `{ deckId, title, rounds }` (`rounds` is the list of rule strings). Start it with `ui:start { deckId }`. |
 | `deck:error` | `{ message }` (a sentence to show the player as is) |
@@ -59,7 +60,9 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 
 **Drawn by the engine on `#game` (so the Partner does not need to):** a definition card where a wrong term was sliced (red) or a correct term was missed (amber), a `↻ REVIEW` tab on chips the player got wrong before (correct and wrong terms alike, so it gives nothing away), and a `↻ N TERMS YOU GOT WRONG ARE BACK` callout at 68% height for about 3 s after `round:start`. Cards sit in one strip at the bottom centre, at most 2 at a time, underneath the flying chips.
 
-After `round:end` the engine pauses until `ui:continue`. After the last round (or lives reach 0) it emits `game:over` instead.
+After `round:end` the engine pauses until `ui:continue`.
+
+**Hands-free menus:** during the round summary and game over the engine draws a swipeable target on its own canvas (`#menu-targets`, z-index 20, `pointer-events: none`) at the right-middle of the screen. Slicing NEXT ROUND clicks `#screens [data-action="continue"]` (falls back to `ui:continue`); slicing PLAY AGAIN emits `ui:start { deckId }` with the same deck. Keep that button's `data-action`, and keep the right-middle of those screens free of important content. After the last round (or lives reach 0) it emits `game:over` instead.
 
 **The last round does not emit `round:end`.** When the final round finishes, the engine goes straight to `game:over`; that round's missed and wrongly sliced terms are covered by `weakTerms`. So the round summary screen never shows after the final round, and a game that ends at 0 lives mid-round also emits `game:over` with no `round:end`.
 

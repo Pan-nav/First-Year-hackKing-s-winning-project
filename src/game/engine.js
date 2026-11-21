@@ -116,6 +116,11 @@ export function createEngine({ canvas }) {
   let items = [];
   let halves = [];
   let termStats = {}; // this game only: { term: { seen, errors } }
+  let startHistory = {}; // stored stats when the game started (to spot terms mastered this game)
+  let learn = { correctTotal: 0, correctSliced: 0, wrongTotal: 0, wrongSliced: 0 }; // for game:over learning
+  let warmupTime = 0;
+  let menuTarget = null; // hands-free NEXT / PLAY AGAIN target: { label, action, x, y, w, h, born }
+  const menuTrails = new Map(); // id -> recent blade points, drawn on the menu layer
   let pickStats = {}; // stats used to weight term picks (O4 merges history in)
   let missed = new Map();
   let wrongSliced = new Map();
@@ -188,7 +193,14 @@ export function createEngine({ canvas }) {
     };
   }
 
+  // The summary's own PLAY AGAIN button (mouse) leaves the game: drop the hands-free target with it.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest?.('#screens [data-action="again"]')) menuTarget = null;
+  });
+
   function startRound(i) {
+    menuTarget = null;
+    menuTrails.clear();
     roundIndex = i;
     state = 'playing';
     roundTime = 0;
@@ -226,6 +238,130 @@ export function createEngine({ canvas }) {
     state = 'summary';
     const list = (m) => [...m.keys()].map((term) => ({ term, definition: definition(term) }));
     bus.emit('round:end', { index: roundIndex, missed: list(missed), wrongSliced: list(wrongSliced) });
+    showMenuTarget('NEXT ROUND ▶', 'continue');
+  }
+
+  /** What this game taught: share of right decisions, and terms got right now that were wrong before. */
+  function learningSummary() {
+    const total = learn.correctTotal + learn.wrongTotal;
+    const wrongAvoided = Math.max(0, learn.wrongTotal - learn.wrongSliced);
+    const improved = Object.entries(termStats)
+      .filter(([term, s]) => s.seen > 0 && s.errors === 0 && (startHistory[term]?.errors ?? 0) > 0)
+      .map(([term]) => ({ term, definition: definition(term) }));
+    return {
+      accuracy: total ? Math.round((100 * (learn.correctSliced + wrongAvoided)) / total) : null,
+      correctSliced: learn.correctSliced,
+      correctTotal: learn.correctTotal,
+      wrongAvoided,
+      wrongTotal: learn.wrongTotal,
+      improved,
+    };
+  }
+
+  // ---- hands-free menu target (NEXT ROUND / PLAY AGAIN), drawn on its own layer above the screens ----
+  const menuCanvas = document.createElement('canvas');
+  menuCanvas.id = 'menu-targets';
+  menuCanvas.setAttribute('aria-hidden', 'true');
+  Object.assign(menuCanvas.style, {
+    position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: '20', pointerEvents: 'none',
+  });
+  canvas.parentElement?.append(menuCanvas);
+  const mctx = menuCanvas.getContext('2d');
+
+  function showMenuTarget(label, action) {
+    if (!CONFIG.handsFreeMenus) return;
+    measureCtx.font = FONT;
+    const w = Math.ceil(measureCtx.measureText(label).width) + CHIP_PAD_X * 2;
+    menuTarget = { label, action, w, h: CHIP_H, x: W - w / 2 - 40, y: H * 0.45, born: clock, learning: null };
+    if (action === 'again') menuTarget.learning = learningSummary();
+  }
+
+  function checkMenuHit(prev, here) {
+    if (!prev || clock - menuTarget.born < CONFIG.menuArmMs) return; // armed after a moment: no accidental skip
+    const dt = here.t - prev.t;
+    if (dt <= 0 || dt > MAX_STROKE_GAP_MS) return;
+    const dist = Math.hypot(here.x - prev.x, here.y - prev.y);
+    if (dist / W / (dt / 1000) < CONFIG.minSliceSpeed) return;
+    const m = menuTarget;
+    const half = Math.max(0, m.w / 2 - m.h / 2);
+    const r = m.h / 2 + CONFIG.hitPad;
+    const my = m.y + menuBob();
+    if (segSegDist2(prev.x, prev.y, here.x, here.y, m.x - half, my, m.x + half, my) <= r * r) triggerMenu();
+  }
+  const menuBob = () => Math.sin(clock / 300) * 8;
+
+  function drawMenu(now) {
+    if (menuCanvas.width !== canvas.width || menuCanvas.height !== canvas.height) {
+      menuCanvas.width = canvas.width;
+      menuCanvas.height = canvas.height;
+    }
+    mctx.setTransform(1, 0, 0, 1, 0, 0);
+    mctx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
+    if (!menuTarget) return;
+    mctx.setTransform(scale, 0, 0, scale, 0, 0);
+    const m = menuTarget;
+    const armed = clock - m.born >= CONFIG.menuArmMs;
+    const y = m.y + menuBob();
+    // the blade trail (the effects layer is hidden under the screens)
+    mctx.strokeStyle = 'rgba(57, 255, 20, 0.9)';
+    mctx.lineWidth = 6;
+    mctx.lineCap = 'round';
+    for (const [id, tr] of menuTrails) {
+      while (tr.length && now - tr[0].t > 220) tr.shift();
+      if (tr.length < 2) {
+        if (!tr.length) menuTrails.delete(id);
+        continue;
+      }
+      mctx.beginPath();
+      tr.forEach((p, i) => (i ? mctx.lineTo(p.x, p.y) : mctx.moveTo(p.x, p.y)));
+      mctx.stroke();
+    }
+    mctx.globalAlpha = armed ? 1 : 0.4;
+    roundRectPath(mctx, m.x - m.w / 2, y - m.h / 2, m.w, m.h, 14);
+    mctx.fillStyle = 'rgba(8, 14, 24, 0.95)';
+    mctx.fill();
+    mctx.lineWidth = 5;
+    mctx.strokeStyle = '#39ff14';
+    mctx.shadowColor = '#39ff14';
+    mctx.shadowBlur = armed ? 18 + Math.sin(now / 150) * 8 : 0;
+    mctx.stroke();
+    mctx.shadowBlur = 0;
+    mctx.font = FONT;
+    mctx.textAlign = 'center';
+    mctx.textBaseline = 'middle';
+    mctx.fillStyle = '#39ff14';
+    mctx.fillText(m.label, m.x, y + 2);
+    mctx.font = TAG_FONT;
+    mctx.fillStyle = '#e8f0ff';
+    mctx.fillText('SWIPE TO SELECT', m.x, y + m.h / 2 + 18);
+    if (m.learning?.accuracy != null) {
+      const l = m.learning;
+      mctx.font = CARD_TITLE_FONT;
+      mctx.fillStyle = '#ffcc39';
+      mctx.fillText(`${l.accuracy}% RIGHT CALLS`, m.x, y - m.h / 2 - 50);
+      mctx.font = TAG_FONT;
+      mctx.fillText(
+        l.improved.length ? `${l.improved.length} TERM${l.improved.length > 1 ? 'S' : ''} MASTERED THIS GAME` : 'PLAY AGAIN TO MASTER YOUR WEAK TERMS',
+        m.x,
+        y - m.h / 2 - 22,
+      );
+    }
+    mctx.globalAlpha = 1;
+  }
+
+  function triggerMenu() {
+    const { action } = menuTarget;
+    menuTarget = null;
+    menuTrails.clear();
+    bus.emit('item:slice', { term: action, kind: 'correct', x: 0.85, y: 0.45, points: 0, combo: 0, definition: '' });
+    if (action === 'continue') {
+      // Press the summary screen's own NEXT ROUND button, so the screen closes exactly as on a click.
+      const button = document.querySelector('#screens [data-action="continue"]');
+      if (button) button.click();
+      else bus.emit('ui:continue', {});
+    } else if (action === 'again') {
+      bus.emit('ui:start', { deckId: deck.id });
+    }
   }
 
   function gameOver() {
@@ -239,8 +375,11 @@ export function createEngine({ canvas }) {
       .sort((a, b) => b[1].errors - a[1].errors || b[1].errors / b[1].seen - a[1].errors / a[1].seen)
       .slice(0, 5)
       .map(([term]) => ({ term, definition: definition(term) }));
-    bus.emit('game:over', { score, rounds: roundIndex + 1, termStats, weakTerms });
+    const learning = learningSummary();
+    console.info('[engine] learning', JSON.stringify({ ...learning, improved: learning.improved.map((i) => i.term) }));
+    bus.emit('game:over', { score, rounds: roundIndex + 1, termStats, weakTerms, learning });
     onGameOver?.(termStats);
+    showMenuTarget('PLAY AGAIN ▶', 'again');
   }
   let onGameOver = null;
 
@@ -321,8 +460,14 @@ export function createEngine({ canvas }) {
     if (kind !== 'brainrot') {
       stat(term).seen++;
       (pickStats[term] ??= { seen: 0, errors: 0 }).seen++;
+      if (kind === 'correct') learn.correctTotal++;
+      else learn.wrongTotal++;
     }
+    launch(term, kind, { review, character });
+  }
 
+  /** Throw one chip up from below the screen (physics shared by rounds and the warm-up). */
+  function launch(term, kind, extra) {
     const w = chipWidth(term);
     const h = CHIP_H;
     const g = CONFIG.gravity;
@@ -346,8 +491,7 @@ export function createEngine({ canvas }) {
       id: nextId++,
       term,
       kind,
-      review,
-      character,
+      ...extra,
       x: x0,
       y: y0,
       vx: (x1 - x0) / Math.max(airtime, CONFIG.minAirtime),
@@ -378,7 +522,14 @@ export function createEngine({ canvas }) {
     const prev = blades.get(id);
     const here = { x: lx, y: ly, t, v: null, src };
     blades.set(id, here);
-    if (!prev || paused || (state !== 'playing' && state !== 'ending')) return;
+    if (menuTarget) {
+      const tr = menuTrails.get(id) ?? [];
+      tr.push({ x: lx, y: ly, t });
+      menuTrails.set(id, tr);
+      checkMenuHit(prev, here);
+      return;
+    }
+    if (!prev || paused || (state !== 'playing' && state !== 'ending' && state !== 'warmup')) return;
     const dt = t - prev.t;
     if (dt <= 0 || dt > MAX_STROKE_GAP_MS) return;
     const dx = lx - prev.x;
@@ -442,6 +593,14 @@ export function createEngine({ canvas }) {
 
   function slice(it, dx, dy) {
     it.sliced = true;
+    if (it.kind === 'warmup') {
+      // Practice target: sparks and sound (sent as a 0-point correct slice), no score, stats or lives.
+      split(it, dx, dy);
+      bus.emit('item:slice', { term: it.term, kind: 'correct', x: it.x / W, y: it.y / H, points: 0, combo: 0, definition: '' });
+      return;
+    }
+    if (it.kind === 'correct') learn.correctSliced++;
+    if (it.kind === 'wrong') learn.wrongSliced++;
     let points;
     if (it.kind === 'correct') {
       combo = clock - lastCorrectAt <= CONFIG.comboWindowMs ? combo + 1 : 1;
@@ -502,6 +661,21 @@ export function createEngine({ canvas }) {
     clock += dt * 1000;
     const g = CONFIG.gravity;
 
+    if (state === 'warmup') {
+      warmupTime += dt;
+      spawnTimer -= dt;
+      if (spawnTimer <= 0 && warmupTime < CONFIG.warmupSeconds - 1) {
+        launch('SLICE ME', 'warmup', {});
+        spawnTimer = 0.7;
+      }
+      if (warmupTime >= CONFIG.warmupSeconds) {
+        for (const it of items) burst(it);
+        items = [];
+        bus.emit('warmup:end', {});
+        startRound(0);
+      }
+    }
+
     if (state === 'playing') {
       roundTime += dt;
       timerAcc += dt;
@@ -555,8 +729,9 @@ export function createEngine({ canvas }) {
     ctx.fillStyle = 'rgba(8, 14, 24, 0.92)';
     ctx.fill();
     ctx.lineWidth = 4;
-    ctx.strokeStyle = '#00e5ff';
-    ctx.shadowColor = '#00e5ff';
+    const edge = it.kind === 'warmup' ? '#39ff14' : '#00e5ff';
+    ctx.strokeStyle = edge;
+    ctx.shadowColor = edge;
     ctx.shadowBlur = 14;
     ctx.stroke();
     ctx.shadowBlur = 0;
@@ -761,6 +936,19 @@ export function createEngine({ canvas }) {
       ctx.restore();
     }
     if (debugBlade) drawBlade(now);
+    if (state === 'warmup') {
+      const left = Math.max(0, Math.ceil(CONFIG.warmupSeconds - warmupTime));
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.textAlign = 'center';
+      ctx.font = BANNER_TITLE_FONT;
+      ctx.fillStyle = '#39ff14';
+      ctx.fillText(`WARM-UP: SWIPE THROUGH THE WORDS · ${left}`, W / 2, H * 0.28);
+      ctx.font = BANNER_SUB_FONT;
+      ctx.fillStyle = '#e8f0ff';
+      ctx.fillText('No points, no lives. Just get the feel.', W / 2, H * 0.28 + 34);
+      ctx.font = FONT;
+    }
+    drawMenu(now);
   }
 
   let last = performance.now();
@@ -804,12 +992,24 @@ export function createEngine({ canvas }) {
       termStats = {};
       pickStats = structuredClone(history);
       characterShown = false;
+      startHistory = structuredClone(history);
+      learn = { correctTotal: 0, correctSliced: 0, wrongTotal: 0, wrongSliced: 0 };
+      menuTarget = null;
+      menuTrails.clear();
       paused = false;
       blades.clear();
       bus.emit('game:start', { deckId: deck.id, deckTitle: deck.title, totalRounds: deck.rounds.length });
       bus.emit('score:update', { score, combo });
       bus.emit('lives:update', { lives, max: CONFIG.maxLives });
-      startRound(0);
+      if (CONFIG.warmupSeconds > 0) {
+        // Practice: a few "SLICE ME" targets, no score or lives, so first-time players learn the gesture.
+        state = 'warmup';
+        warmupTime = 0;
+        spawnTimer = 0.3;
+        bus.emit('warmup:start', { seconds: CONFIG.warmupSeconds });
+      } else {
+        startRound(0);
+      }
     },
     /** Called with this game's termStats when the game ends (used to persist them). */
     onGameOver(fn) {
