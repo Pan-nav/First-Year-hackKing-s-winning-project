@@ -40,10 +40,10 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | Event | Payload |
 |---|---|
 | `game:start` | `{ deckId, deckTitle, totalRounds }` |
-| `round:start` | `{ index, total, rule, seconds }` (index starts at 0) |
+| `round:start` | `{ index, total, rule, seconds, review }` (index starts at 0; `review` is the terms in this round the player got wrong in any earlier game or round, possibly empty) |
 | `timer:update` | `{ secondsLeft }` (about 4 times a second) |
-| `item:slice` | `{ term, kind, x, y, points, combo }` (`points` can be negative) |
-| `item:miss` | `{ term }` (a correct term fell off the bottom) |
+| `item:slice` | `{ term, kind, x, y, points, combo, definition }` (`points` can be negative; `definition` is `''` for brainrot) |
+| `item:miss` | `{ term, definition }` (a correct term fell off the bottom) |
 | `score:update` | `{ score, combo }` |
 | `lives:update` | `{ lives, max }` |
 | `round:end` | `{ index, missed: [{ term, definition }], wrongSliced: [{ term, definition }] }` |
@@ -51,6 +51,8 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 
 `termStats` is for this game only: `{ [term]: { seen, errors } }`.
 `weakTerms` is the top 5 terms by errors: `[{ term, definition }]`.
+
+**Drawn by the engine on `#game` (so the Partner does not need to):** a definition card where a wrong term was sliced (red) or a correct term was missed (amber), a `↻ REVIEW` tab on chips the player got wrong before (correct and wrong terms alike, so it gives nothing away), and a `↻ N TERMS YOU GOT WRONG ARE BACK` callout at 68% height for about 3 s after `round:start`. Cards sit in one strip at the bottom centre, at most 2 at a time, underneath the flying chips.
 
 After `round:end` the engine pauses until `ui:continue`. After the last round (or lives reach 0) it emits `game:over` instead.
 

@@ -8,7 +8,24 @@ import { bus } from '../bus.js';
 import { CONFIG } from '../config.js';
 import { pickWeighted } from './adaptive.js';
 
-const FONT = `bold ${Math.max(36, CONFIG.chipFontPx)}px ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace`;
+const MONO = 'ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace';
+const FONT = `bold ${Math.max(36, CONFIG.chipFontPx)}px ${MONO}`;
+// "Show the learning": definition cards on mistakes, REVIEW tags, and a round-start callout.
+const CARD_TITLE_FONT = `bold 21px ${MONO}`;
+const CARD_BODY_FONT = `bold 18px ${MONO}`;
+const BANNER_TITLE_FONT = `bold 24px ${MONO}`;
+const BANNER_SUB_FONT = `bold 20px ${MONO}`;
+const TAG_FONT = `bold 17px ${MONO}`;
+const CARD_MAX_W = 620;
+const CARD_MAX = 2;
+const CARD_PAD = 10;
+const CARD_TITLE_H = 26;
+const CARD_LINE_H = 23;
+const CARD_MS = 3400;
+const BANNER_MS = 3200;
+const CARD_COLOR = { wrong: '#ff4f87', miss: '#ffcc39' };
+const REVIEW_COLOR = '#ffcc39';
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 const CHIP_PAD_X = 26;
 const CHIP_H = Math.max(36, CONFIG.chipFontPx) + 30;
 const TIMER_EVERY = 0.25; // seconds between timer:update events
@@ -103,12 +120,53 @@ export function createEngine({ canvas }) {
   let wrongSliced = new Map();
   let diff = {};
   let nextId = 1;
+  let cards = []; // definition cards: { x, y, w, h, title, lines, color, born }
+  let banner = null; // round-start review callout: { title, sub, born }
 
   const measureCtx = document.createElement('canvas').getContext('2d');
-  measureCtx.font = FONT;
-  const chipWidth = (term) => Math.ceil(measureCtx.measureText(term).width) + CHIP_PAD_X * 2;
+  const chipWidth = (term) => {
+    measureCtx.font = FONT;
+    return Math.ceil(measureCtx.measureText(term).width) + CHIP_PAD_X * 2;
+  };
 
   const definition = (term) => deck?.definitions?.[term] ?? '';
+  const isReview = (term) => (pickStats[term]?.errors ?? 0) > 0;
+
+  // ---- definition cards ----
+  function wrap(text, font, maxW) {
+    measureCtx.font = font;
+    const lines = [];
+    let line = '';
+    for (const word of text.split(/\s+/)) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && measureCtx.measureText(next).width > maxW) {
+        lines.push(line);
+        line = word;
+      } else line = next;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // Cards live in one strip at the bottom centre (between the mascot and the camera preview),
+  // newest at the bottom, at most CARD_MAX alive. Chips are drawn over them, so play is never hidden.
+  function addCard({ title, body, color }) {
+    const same = cards.find((c) => c.title === title);
+    if (same) {
+      same.born = clock;
+      return;
+    }
+    const maxW = Math.max(260, Math.min(CARD_MAX_W, W - 460));
+    const lines = body ? wrap(body, CARD_BODY_FONT, maxW - CARD_PAD * 2) : [];
+    measureCtx.font = CARD_TITLE_FONT;
+    let inner = measureCtx.measureText(title).width;
+    measureCtx.font = CARD_BODY_FONT;
+    for (const l of lines) inner = Math.max(inner, measureCtx.measureText(l).width);
+    const w = Math.min(Math.ceil(inner) + CARD_PAD * 2, maxW);
+    const h = CARD_PAD * 2 + CARD_TITLE_H + lines.length * CARD_LINE_H;
+    cards.push({ w, h, title, lines, color, born: clock });
+    if (cards.length > CARD_MAX) cards.shift();
+  }
   const stat = (term) => (termStats[term] ??= { seen: 0, errors: 0 });
   const addError = (term) => {
     stat(term).errors++;
@@ -136,7 +194,17 @@ export function createEngine({ canvas }) {
     missed = new Map();
     wrongSliced = new Map();
     diff = difficulty(i);
-    bus.emit('round:start', { index: i, total: deck.rounds.length, rule: deck.rounds[i].rule, seconds: CONFIG.roundSeconds });
+    // Terms in this round the player got wrong before (any game): adaptive repetition made visible.
+    const round = deck.rounds[i];
+    const review = [...round.correct, ...round.wrong].filter((t) => isReview(t));
+    banner = review.length
+      ? {
+          title: `↻ ${review.length} TERM${review.length > 1 ? 'S' : ''} YOU GOT WRONG ${review.length > 1 ? 'ARE' : 'IS'} BACK`,
+          sub: review.slice(0, 3).join(' · ') + (review.length > 3 ? ' …' : ''),
+          born: clock,
+        }
+      : null;
+    bus.emit('round:start', { index: i, total: deck.rounds.length, rule: round.rule, seconds: CONFIG.roundSeconds, review });
     bus.emit('timer:update', { secondsLeft: CONFIG.roundSeconds });
   }
 
@@ -185,6 +253,7 @@ export function createEngine({ canvas }) {
     else if (r < diff.brainrot + diff.wrong) kind = 'wrong';
     const pool = kind === 'brainrot' ? brainrot : round[kind];
     const term = kind === 'brainrot' ? pool[Math.floor(Math.random() * pool.length)] : pickTerm(pool);
+    const review = kind !== 'brainrot' && isReview(term);
     if (kind !== 'brainrot') {
       stat(term).seen++;
       (pickStats[term] ??= { seen: 0, errors: 0 }).seen++;
@@ -213,6 +282,7 @@ export function createEngine({ canvas }) {
       id: nextId++,
       term,
       kind,
+      review,
       x: x0,
       y: y0,
       vx: (x1 - x0) / Math.max(airtime, CONFIG.minAirtime),
@@ -275,11 +345,13 @@ export function createEngine({ canvas }) {
       if (it.kind === 'wrong') {
         addError(it.term);
         wrongSliced.set(it.term, true);
+        addCard({ title: `✗ NOT IT: ${it.term}`, body: definition(it.term), color: CARD_COLOR.wrong });
       }
     }
     score = Math.max(0, score + points);
     split(it, dx, dy);
-    bus.emit('item:slice', { term: it.term, kind: it.kind, x: it.x / W, y: it.y / H, points, combo });
+    const def = it.kind === 'brainrot' ? '' : definition(it.term);
+    bus.emit('item:slice', { term: it.term, kind: it.kind, x: it.x / W, y: it.y / H, points, combo, definition: def });
     bus.emit('score:update', { score, combo });
     if (it.kind === 'brainrot') loseLife();
   }
@@ -306,7 +378,8 @@ export function createEngine({ canvas }) {
   function miss(it) {
     addError(it.term);
     missed.set(it.term, true);
-    bus.emit('item:miss', { term: it.term });
+    addCard({ title: `MISSED: ${it.term}`, body: definition(it.term), color: CARD_COLOR.miss });
+    bus.emit('item:miss', { term: it.term, definition: definition(it.term) });
     if (combo) {
       combo = 0;
       bus.emit('score:update', { score, combo });
@@ -359,6 +432,8 @@ export function createEngine({ canvas }) {
       hf.age += dt;
     }
     halves = halves.filter((hf) => hf.age < 1.6 && hf.y < H + 200);
+    cards = cards.filter((c) => clock - c.born < CARD_MS);
+    if (banner && clock - banner.born > BANNER_MS) banner = null;
 
     if (state === 'ending' && items.length === 0) endRound();
   }
@@ -378,12 +453,79 @@ export function createEngine({ canvas }) {
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#f4f8ff';
     ctx.fillText(it.term, 0, 2);
+    // Terms you got wrong before wear a tab. Correct and wrong terms both can, so it gives nothing away.
+    if (it.review) {
+      ctx.font = TAG_FONT;
+      const label = '↻ REVIEW';
+      const tw = ctx.measureText(label).width + 16;
+      roundRectPath(ctx, -w / 2 + 12, -h / 2 - 24, tw, 26, 6);
+      ctx.fillStyle = REVIEW_COLOR;
+      ctx.fill();
+      ctx.fillStyle = '#1a1200';
+      ctx.fillText(label, -w / 2 + 12 + tw / 2, -h / 2 - 10);
+      ctx.font = FONT;
+    }
+  }
+
+  function drawCards() {
+    let bottom = H - 14;
+    for (let i = cards.length - 1; i >= 0; i--) {
+      const c = cards[i];
+      const age = clock - c.born;
+      ctx.globalAlpha = clamp(Math.min(age / 150, (CARD_MS - age) / 500), 0, 1);
+      const x = W / 2 - c.w / 2;
+      const y = bottom - c.h;
+      bottom = y - 8;
+      roundRectPath(ctx, x, y, c.w, c.h, 8);
+      ctx.fillStyle = 'rgba(6, 10, 20, 0.88)';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = c.color;
+      ctx.stroke();
+      ctx.textAlign = 'left';
+      ctx.font = CARD_TITLE_FONT;
+      ctx.fillStyle = c.color;
+      ctx.fillText(c.title, x + CARD_PAD, y + CARD_PAD + CARD_TITLE_H / 2);
+      ctx.font = CARD_BODY_FONT;
+      ctx.fillStyle = '#e8f0ff';
+      c.lines.forEach((l, k) =>
+        ctx.fillText(l, x + CARD_PAD, y + CARD_PAD + CARD_TITLE_H + CARD_LINE_H / 2 + k * CARD_LINE_H),
+      );
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBanner(b) {
+    const age = clock - b.born;
+    ctx.globalAlpha = clamp(Math.min(age / 200, (BANNER_MS - age) / 500), 0, 1);
+    ctx.font = BANNER_TITLE_FONT;
+    const w1 = ctx.measureText(b.title).width;
+    ctx.font = BANNER_SUB_FONT;
+    const w2 = ctx.measureText(b.sub).width;
+    const w = Math.min(W - 24, Math.max(w1, w2) + 40);
+    const h = 84;
+    const y = H * 0.68;
+    roundRectPath(ctx, W / 2 - w / 2, y - h / 2, w, h, 10);
+    ctx.fillStyle = 'rgba(6, 10, 20, 0.92)';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = REVIEW_COLOR;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = BANNER_TITLE_FONT;
+    ctx.fillStyle = REVIEW_COLOR;
+    ctx.fillText(b.title, W / 2, y - 14);
+    ctx.font = BANNER_SUB_FONT;
+    ctx.fillStyle = '#e8f0ff';
+    ctx.fillText(b.sub, W / 2, y + 20);
+    ctx.globalAlpha = 1;
   }
 
   function drawBrainrot(it, t) {
     const { w, h } = it;
-    const jx = rand(-2.5, 2.5);
-    const jy = rand(-2, 2);
+    const calm = reducedMotion?.matches; // no per-frame jitter or torn bands for reduced motion
+    const jx = calm ? 0 : rand(-2.5, 2.5);
+    const jy = calm ? 0 : rand(-2, 2);
     const hue = (t / 6 + it.id * 47) % 360;
     roundRectPath(ctx, -w / 2 + jx, -h / 2 + jy, w, h, 4);
     ctx.fillStyle = `hsla(${hue}, 90%, 18%, 0.95)`;
@@ -404,7 +546,7 @@ export function createEngine({ canvas }) {
     ctx.fillStyle = '#ffee00';
     ctx.fillText(it.term, 0, 2);
     // a torn scanline band, shifted sideways
-    if (Math.random() < 0.5) {
+    if (!calm && Math.random() < 0.5) {
       const by = rand(-h / 2, h / 2 - 10);
       ctx.save();
       ctx.beginPath();
@@ -460,9 +602,12 @@ export function createEngine({ canvas }) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.textBaseline = 'middle';
+    // Learning overlays go underneath, so flying chips always stay visible and sliceable.
+    drawCards();
+    if (banner) drawBanner(banner);
     ctx.font = FONT;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
     for (const hf of halves) {
       ctx.save();
       ctx.translate(hf.x, hf.y);
@@ -516,6 +661,8 @@ export function createEngine({ canvas }) {
       misses = 0;
       items = [];
       halves = [];
+      cards = [];
+      banner = null;
       termStats = {};
       pickStats = structuredClone(history);
       paused = false;
