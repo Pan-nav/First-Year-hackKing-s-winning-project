@@ -19,6 +19,10 @@ export const CONFIG = {
   // camera frame or two stay well under 9 w/s; an id swap between two hands is ~12+ w/s.
   maxJump: 0.3,
   maxBladeSpeed: 9,
+  // Gaps longer than bridgeAfterMs (the tracker lost the hand, usually to motion blur mid-swipe) are
+  // swept across only if the hand was already moving at bridgeMinSpeed (w/s) towards where it reappeared.
+  bridgeAfterMs: 110,
+  bridgeMinSpeed: 0.35,
   // Camera box (MediaPipe 0..1 coords, x already mirrored) that maps onto the full screen, so the
   // hand never has to touch the frame edge, where MediaPipe loses it. Tune at the venue.
   reach: { left: 0.08, right: 0.92, top: 0.12, bottom: 0.85 },

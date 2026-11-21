@@ -7,9 +7,10 @@ import { assignIds, mapToScreen } from './handMapping.js';
 import { OneEuro } from './oneEuro.js';
 
 const INDEX_FINGERTIP = 8;
-// No detection for this long -> blade:end. Long enough to ride out the frames MediaPipe drops
-// during a fast, motion-blurred swipe, so the engine can sweep straight across the gap.
-const HAND_LOST_MS = 220;
+// No detection for this long -> blade:end. MediaPipe often loses the hand for most of a fast,
+// motion-blurred swipe; keeping the stroke open lets the engine sweep across the gap (it checks that
+// the hand was already moving that way, so a hand that reappears elsewhere does not slice).
+const HAND_LOST_MS = 450;
 
 // Local copies (npm run vendor:mediapipe) are preferred so the demo works offline; otherwise use the CDN.
 const LOCAL = `${import.meta.env.BASE_URL}mediapipe/`;
@@ -36,9 +37,11 @@ async function createLandmarker() {
     baseOptions: { modelAssetPath, delegate },
     runningMode: 'VIDEO',
     numHands: 2,
-    minHandDetectionConfidence: 0.5,
-    minHandPresenceConfidence: 0.5,
-    minTrackingConfidence: 0.5,
+    // Slightly below the 0.5 defaults so a blurred or half-occluded hand (fast swipe, crossed hands)
+    // is kept a little longer instead of dropped.
+    minHandDetectionConfidence: 0.45,
+    minHandPresenceConfidence: 0.4,
+    minTrackingConfidence: 0.4,
   });
   try {
     return await HandLandmarker.createFromOptions(fileset, options('GPU'));
@@ -51,11 +54,14 @@ async function createLandmarker() {
 export async function startHandTracker({ video }) {
   if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera API not available');
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: 640, height: 480, facingMode: 'user' },
+    // 60 fps where the webcam offers it: shorter exposure, less blur, twice the samples per swipe.
+    video: { width: 640, height: 480, facingMode: 'user', frameRate: { ideal: 60 } },
     audio: false,
   });
   video.srcObject = stream;
   await video.play();
+  const cam = stream.getVideoTracks()[0]?.getSettings?.() ?? {};
+  console.info(`[hands] camera ${cam.width}x${cam.height} at ${cam.frameRate ?? '?'} fps`);
 
   let landmarker;
   try {

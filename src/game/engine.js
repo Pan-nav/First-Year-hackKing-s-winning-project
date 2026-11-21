@@ -30,7 +30,7 @@ const CHIP_PAD_X = 26;
 const CHIP_H = Math.max(36, CONFIG.chipFontPx) + 30;
 const TIMER_EVERY = 0.25; // seconds between timer:update events
 const FIRST_SPAWN_DELAY = 1.6; // let the rule banner be read first
-const MAX_STROKE_GAP_MS = 260; // longer gaps between blade points start a new stroke (matches handTracker HAND_LOST_MS)
+const MAX_STROKE_GAP_MS = 480; // longer gaps between blade points start a new stroke (handTracker HAND_LOST_MS is 450)
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -298,26 +298,50 @@ export function createEngine({ canvas }) {
   // ---- slicing ----
   const blades = new Map(); // id -> last point { x, y, t } in logical px
   const trails = new Map(); // id -> [{ x, y, t }] (debug draw only)
+  // /?debug draws every blade sample as a dot, plus tracking gaps: green = swept across, red = ignored.
+  const debugBlade = CONFIG.drawBladeDebug || new URLSearchParams(location.search).has('debug');
+  const debugGaps = [];
 
   function onBladePoint({ id, x, y, t }) {
     const lx = x * W;
     const ly = y * H;
-    if (CONFIG.drawBladeDebug) {
+    if (debugBlade) {
       const tr = trails.get(id) ?? [];
       tr.push({ x: lx, y: ly, t });
       trails.set(id, tr);
     }
     const prev = blades.get(id);
-    blades.set(id, { x: lx, y: ly, t });
+    const here = { x: lx, y: ly, t, v: null };
+    blades.set(id, here);
     if (!prev || paused || (state !== 'playing' && state !== 'ending')) return;
     const dt = t - prev.t;
     if (dt <= 0 || dt > MAX_STROKE_GAP_MS) return;
-    const speed = Math.hypot(lx - prev.x, ly - prev.y) / W / (dt / 1000); // screen widths per second
-    // A long jump at an impossible speed is a tracking glitch (e.g. ids swapped between two hands),
-    // not a swipe. A long jump over a dropped frame or two is a real fast swipe: sweep across it.
-    if (Math.hypot(lx - prev.x, ly - prev.y) > CONFIG.maxJump * W && speed > CONFIG.maxBladeSpeed) return;
+    const dx = lx - prev.x;
+    const dy = ly - prev.y;
+    const dist = Math.hypot(dx, dy);
+    here.v = { x: dx / dt, y: dy / dt }; // px per ms, used to judge the next gap
+    const speed = dist / W / (dt / 1000); // screen widths per second
+    // A long jump at an impossible speed is a tracking glitch (e.g. ids swapped between two hands).
+    if (dist > CONFIG.maxJump * W && speed > CONFIG.maxBladeSpeed) return;
+    // A long gap means the tracker lost the hand, usually to motion blur in a fast swipe. Sweep across
+    // it only if the hand was already moving fast in roughly this direction; otherwise it is a hand
+    // that reappeared somewhere else, which must not slice everything in between.
+    if (dt > CONFIG.bridgeAfterMs) {
+      const pv = prev.v;
+      const pSpeed = pv ? (Math.hypot(pv.x, pv.y) * 1000) / W : 0;
+      const cos = pv && dist > 0 ? (pv.x * dx + pv.y * dy) / (Math.hypot(pv.x, pv.y) * dist) : -1;
+      if (pSpeed < CONFIG.bridgeMinSpeed || cos < 0.5) {
+        if (debugBlade) debugGaps.push({ ax: prev.x, ay: prev.y, bx: lx, by: ly, t, ok: false });
+        return;
+      }
+      if (debugBlade) debugGaps.push({ ax: prev.x, ay: prev.y, bx: lx, by: ly, t, ok: true });
+    }
     if (speed < CONFIG.minSliceSpeed) return;
 
+    // Sweep in each word's own frame: the word moved during dt too (a lot, over a tracking gap), so
+    // compare the blade path with where the word was at the start and end of that same interval.
+    const dts = dt / 1000;
+    const g = CONFIG.gravity;
     for (const it of items) {
       if (state === 'over') break; // slicing brainrot can end the game mid-stroke
       if (it.sliced) continue;
@@ -325,9 +349,10 @@ export function createEngine({ canvas }) {
       const ax = Math.cos(it.rot) * half;
       const ay = Math.sin(it.rot) * half;
       const r = it.h / 2 + CONFIG.hitPad;
-      if (segSegDist2(prev.x, prev.y, lx, ly, it.x - ax, it.y - ay, it.x + ax, it.y + ay) <= r * r) {
-        slice(it, lx - prev.x, ly - prev.y);
-      }
+      const pastX = it.x - it.vx * dts;
+      const pastY = it.y - (it.vy * dts - 0.5 * g * dts * dts);
+      const hit = segSegDist2(prev.x - pastX, prev.y - pastY, lx - it.x, ly - it.y, -ax, -ay, ax, ay) <= r * r;
+      if (hit) slice(it, dx, dy);
     }
     items = items.filter((it) => !it.sliced);
   }
@@ -587,14 +612,27 @@ export function createEngine({ canvas }) {
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    const keep = 700; // ms of history, long enough to see what happened during a fast swipe
     for (const [id, tr] of trails) {
-      while (tr.length && now - tr[0].t > 200) tr.shift();
-      if (tr.length < 2) {
-        if (!tr.length) trails.delete(id);
+      while (tr.length && now - tr[0].t > keep) tr.shift();
+      if (!tr.length) {
+        trails.delete(id);
         continue;
       }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.beginPath();
       tr.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.stroke();
+      ctx.fillStyle = id ? '#ff9f1c' : '#ffffff'; // one dot per tracked camera frame
+      for (const p of tr) ctx.fillRect(p.x - 4, p.y - 4, 8, 8);
+    }
+    while (debugGaps.length && now - debugGaps[0].t > keep) debugGaps.shift();
+    ctx.lineWidth = 6;
+    for (const gp of debugGaps) {
+      ctx.strokeStyle = gp.ok ? '#39ff14' : '#ff3355'; // green: gap swept across, red: gap ignored
+      ctx.beginPath();
+      ctx.moveTo(gp.ax, gp.ay);
+      ctx.lineTo(gp.bx, gp.by);
       ctx.stroke();
     }
   }
@@ -623,7 +661,7 @@ export function createEngine({ canvas }) {
       drawChip(it, now);
       ctx.restore();
     }
-    if (CONFIG.drawBladeDebug) drawBlade(now);
+    if (debugBlade) drawBlade(now);
   }
 
   let last = performance.now();
