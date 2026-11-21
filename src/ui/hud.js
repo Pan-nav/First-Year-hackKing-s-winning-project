@@ -97,5 +97,14 @@ export function initHud() {
     $('brain-mascot').querySelector('small').textContent = remaining ? ['STAY SHARP!', 'OW!', 'CRITICAL!', 'MELTING!'][damage] : 'GAME OVER';
   });
   bus.on('round:end', () => announcement.classList.remove('visible'));
+  // Camera denied or unavailable: main.js switched to the mouse. Say so instead of asking for laser dots.
+  bus.on('input:fallback', () => {
+    mouseMode = true;
+    hideCalibration();
+    announcement.textContent = 'NO CAMERA: SLICE WITH YOUR MOUSE';
+    announcement.classList.add('visible');
+    clearTimeout(announceTimer);
+    announceTimer = setTimeout(() => announcement.classList.remove('visible'), 4000);
+  });
   bus.on('game:over', () => { announcement.classList.remove('visible'); hideCalibration(); });
 }

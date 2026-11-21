@@ -45,7 +45,8 @@ export async function initScreens() {
   const root = document.getElementById('screens');
   let decks = [];
   let deckId = '';
-  const input = 'hands';
+  // ?input=mouse forces the mouse even when a webcam is available (testing, or no camera wanted).
+  const input = new URLSearchParams(location.search).get('input') === 'mouse' ? 'mouse' : 'hands';
   let mainAction = null;
   let screen = 'start';
   let tutorialIndex = 0;

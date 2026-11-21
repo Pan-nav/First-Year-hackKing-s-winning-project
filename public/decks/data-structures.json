@@ -47,7 +47,7 @@
       ]
     },
     {
-      "rule": "Slice only: SQL COMMANDS",
+      "rule": "Slice only: SQL KEYWORDS",
       "correct": [
         "SELECT",
         "INSERT",

@@ -50,6 +50,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `round:end` | `{ index, missed: [{ term, definition }], wrongSliced: [{ term, definition }] }` |
 | `game:over` | `{ score, rounds, termStats, weakTerms, learning }` (`learning`: `{ accuracy, correctSliced, correctTotal, wrongAvoided, wrongTotal, improved: [{ term, definition }] }`; `accuracy` is the % of right calls, or null; `improved` = terms got wrong in an earlier game and right in this one) |
 | `warmup:start` / `warmup:end` | `{ seconds }` / `{}`: 5 s of practice "SLICE ME" targets before round 1 (no score, no lives). Their slices arrive as `item:slice` with `kind: 'correct'`, `points: 0`. |
+| `input:fallback` | `{ input: 'mouse' }`: the camera or hand model failed, so `main.js` switched to the mouse (the HUD tells the player). |
 | `deck:generating` | `{}` (a `ui:generateDeck` request started; usually 10 to 25 s, gives up after about 55 s) |
 | `deck:ready` | `{ deckId, title, rounds }` (`rounds` is the list of rule strings). Start it with `ui:start { deckId }`. |
 | `deck:error` | `{ message }` (a sentence to show the player as is) |

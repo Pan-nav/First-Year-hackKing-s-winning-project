@@ -64,6 +64,8 @@ export function initMusic() {
   // Schedule a little ahead of time on a timer, so the music keeps steady time even when frames stutter.
   function schedule() {
     master.gain.setTargetAtTime(muted() ? 0 : VOLUME, ctx.currentTime, 0.05);
+    // A background tab slows this timer; skip the notes that were due meanwhile instead of firing them all at once.
+    if (nextTime < ctx.currentTime) nextTime = ctx.currentTime + 0.05;
     while (nextTime < ctx.currentTime + 0.12) {
       const bar = Math.floor(step / 16) % 4;
       const s = step % 16;

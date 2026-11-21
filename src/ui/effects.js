@@ -38,7 +38,6 @@ export function initFx(canvas) {
     'ohio': { emoji: '🙃', title: 'ONLY IN OHIO', subtitle: 'YOUR WORLD IS A LITTLE SIDEWAYS', style: 'tilt', extra: '🌽' },
     'aura': { emoji: '💀', title: '-9999 AURA', subtitle: 'YOUR VIBES HAVE BEEN AUDITED', style: 'bounce', extra: '💀' },
     'aura farming': { emoji: '💀', title: '-9999 AURA', subtitle: 'YOUR VIBES HAVE BEEN AUDITED', style: 'bounce', extra: '💀' },
-    'gyatt': { emoji: '🍟', title: 'EXTRA CRISPY', subtitle: 'MAXIMUM DEEP FRY', style: 'bounce', extra: '🍟' },
     'tralalero': { emoji: '🦈', title: 'TRALALERO TRALALA', subtitle: 'A SHARK IN SNEAKERS SWAM OFF WITH YOUR FOCUS', style: 'swim', extra: '👟' },
     'bombardiro': { emoji: '🐊', title: 'BOMBARDIRO CROCODILO', subtitle: 'BOMBS AWAY ON YOUR REVISION', style: 'fly', extra: '💣' },
     'cappuccina': { emoji: '☕', title: 'BALLERINA CAPPUCCINA', subtitle: 'SHE PIROUETTED THROUGH YOUR BRAIN CELLS', style: 'spin', extra: '✨' },
@@ -179,7 +178,7 @@ export function initFx(canvas) {
       const speed = 60 + Math.random() * 200;
       particles.push({ x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, born: performance.now(), life: 400 + Math.random() * 350, color, emoji: kind === 'brainrot' && i % 6 === 0 ? '💀' : '' });
     }
-    popups.push({ x: cx, y: cy, born: performance.now(), points, color, kind });
+    if (points) popups.push({ x: cx, y: cy, born: performance.now(), points, color, kind }); // no floating 0 for warm-up / menu slices
     if (kind === 'correct') showCombo(Number(combo) || 0);
     else lastComboShown = 0;
     if (kind === 'wrong' || kind === 'brainrot') {

@@ -40,6 +40,7 @@ async function useInput(kind) {
       return;
     } catch (err) {
       console.warn('Hand tracking unavailable, falling back to mouse:', err);
+      bus.emit('input:fallback', { input: 'mouse' });
     }
   }
   stopInput = startMouseBlade(stage);
