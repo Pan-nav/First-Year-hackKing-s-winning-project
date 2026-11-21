@@ -4,6 +4,7 @@ import { loadDeck, loadBrainrot } from './decks.js';
 import { createEngine } from './game/engine.js';
 import { startHandTracker } from './input/handTracker.js';
 import { startMouseBlade } from './input/mouseBlade.js';
+import { getTermStats, saveTermStats } from './storage.js';
 import { initAudio } from './ui/audio.js';
 import { initFx } from './ui/effects.js';
 import { initHud } from './ui/hud.js';
@@ -40,7 +41,17 @@ async function useInput(kind) {
 bus.on('ui:start', async ({ deckId, input = defaultInput }) => {
   await useInput(input);
   const [deck, brainrot] = await Promise.all([loadDeck(deckId), loadBrainrot()]);
-  engine.start({ deck, brainrot });
+  engine.start({ deck, brainrot, history: getTermStats() });
+});
+
+// O4 adaptive repetition: fold this game's stats into the stored history (local only, no accounts).
+engine.onGameOver((gameStats) => {
+  const all = getTermStats();
+  for (const [term, s] of Object.entries(gameStats)) {
+    const prev = all[term] ?? { seen: 0, errors: 0 };
+    all[term] = { seen: prev.seen + s.seen, errors: prev.errors + s.errors };
+  }
+  saveTermStats(all);
 });
 
 // Dev shortcut: /?input=mouse&deck=sql-databases starts straight into a game (no start screen needed).
