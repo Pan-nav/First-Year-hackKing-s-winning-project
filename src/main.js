@@ -47,7 +47,11 @@ async function useInput(kind) {
 // only: nothing is saved, and a reload forgets both. The SDK is loaded on first use, so it costs
 // nothing for players who never open the job-spec panel.
 const generatedDecks = new Map(); // deckId -> deck
-let apiKeyInMemory = '';
+// Demo laptop: a key in .env.local (git-ignored) is used when the player leaves the key field empty.
+// Dev server only: import.meta.env.DEV is false in `npm run build`, so the key never reaches dist/.
+const devKey = import.meta.env.DEV ? (import.meta.env.VITE_GEMINI_API_KEY ?? '') : '';
+let apiKeyInMemory = devKey;
+bus.emit('deck:keyStatus', { hasKey: Boolean(devKey) });
 let generating = false;
 bus.on('ui:generateDeck', async ({ jobText, apiKey }) => {
   if (generating) return;

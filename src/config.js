@@ -23,7 +23,7 @@ export const CONFIG = {
   logicalHeight: 720,
   // Blade speed (screen widths per second) needed to slice. High enough that drifting or bringing the
   // hand back after a swipe does not cut words; a deliberate swipe is well above it.
-  minSliceSpeed: 0.9,
+  minSliceSpeed: 0.65,
   // A blade move longer than maxJump (screen widths) in one sample AND faster than maxBladeSpeed
   // (screen widths per second) is a tracking glitch, not a swipe. A real flick can cover a third of
   // the screen in one frame; an id swap between two hands is still 25+ w/s.

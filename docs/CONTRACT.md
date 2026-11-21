@@ -35,7 +35,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `ui:start` | `{ deckId, input? }` | Start or restart a game. `input` is `'hands'` or `'mouse'` (optional). |
 | `ui:continue` | `{}` | Player pressed NEXT ROUND on the round summary. Engine waits for this. |
 | `ui:pause` / `ui:resume` | `{}` | Pause and resume. |
-| `ui:generateDeck` | `{ jobText, apiKey? }` | Build a deck from a pasted job description. `apiKey` is the player's Google AI Studio (Gemini) key, or an Anthropic key starting `sk-ant-`; it is kept in memory only, so later requests may omit it. Ignored while a generation is running. |
+| `ui:generateDeck` | `{ jobText, apiKey? }` | Build a deck from a pasted job description. `apiKey` is the player's Google AI Studio (Gemini) key, or an Anthropic key starting `sk-ant-`; it is kept in memory only, so later requests may omit it. On the demo laptop (dev server with `.env.local`) a key is already loaded, so `apiKey` may be empty: see `deck:keyStatus`. Ignored while a generation is running. |
 
 ## Engine to everyone (produced by `game/engine.js`)
 | Event | Payload |
@@ -52,6 +52,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 | `deck:generating` | `{}` (a `ui:generateDeck` request started; usually 10 to 25 s, gives up after about 55 s) |
 | `deck:ready` | `{ deckId, title, rounds }` (`rounds` is the list of rule strings). Start it with `ui:start { deckId }`. |
 | `deck:error` | `{ message }` (a sentence to show the player as is) |
+| `deck:keyStatus` | `{ hasKey }` (sent once at startup; `hasKey: true` means a key is preloaded, so the key field should be optional) |
 
 `termStats` is for this game only: `{ [term]: { seen, errors } }`.
 `weakTerms` is the top 5 terms by errors: `[{ term, definition }]`.
@@ -82,6 +83,8 @@ Rules enforced by `npm run check:decks`: at least 3 rounds; each round has at le
 **Generated decks** (from `ui:generateDeck`) have the same shape plus `generated: true`, live only in memory, and are started by their `deckId` like any other deck. Terms and definitions are plain text (no `<`, `>` or backticks), but still insert them with `textContent`.
 
 **`public/decks/brainrot.json`**: `{ "words": ["rizz", "..."] }` (clean words only, 16 characters or fewer)
+
+**Brainrot characters** come from `CONFIG.brainrotCharacters` in `src/config.js` (`TUNG TUNG SAHUR`, `TRALALERO`, `BOMBARDIRO`, `CAPPUCCINA`), not from `brainrot.json`. They spawn as `kind: 'brainrot'` with `term` exactly as listed, so `ui/effects.js` matches them lower-cased. Every game shows `TUNG TUNG SAHUR` once in round 1.
 
 **Brainrot characters** are added by the engine from `CONFIG.brainrotCharacters` (`src/config.js`), not from `brainrot.json`: `TUNG TUNG SAHUR`, `TRALALERO`, `BOMBARDIRO`, `CAPPUCCINA`. They arrive as `item:slice` with `kind: 'brainrot'` and `term` exactly as listed, so `ui/effects.js` matches them lower-cased. Every game shows `TUNG TUNG SAHUR` once in round 1; after that about a quarter of brainrot spawns are characters. To add one, add its name to that list (16 characters or fewer) and a matching key in `ui/effects.js`.
 

@@ -158,7 +158,7 @@ export async function startHandTracker({ video }) {
     // Pose costs ~10-20 ms a frame: every frame while a hand is lost or on pose, every other frame
     // while hands are tracked (keeps it locked on and the fingertip offsets fresh), never when idle.
     let arms = null;
-    if (pose && (plan.needPose || (plan.wantPose && frames % 2 === 0))) {
+    if (pose && (plan.needPose || (plan.wantPose && frames % 3 === 0))) {
       try {
         arms = poseHands(pose.detectForVideo(video, now).landmarks?.[0]);
       } catch (err) {

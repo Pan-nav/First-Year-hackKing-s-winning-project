@@ -416,7 +416,10 @@ export function createEngine({ canvas }) {
       }
       if (debugBlade) debugGaps.push({ ax: prev.x, ay: prev.y, bx: lx, by: ly, t, ok: true });
     }
-    if (speed < CONFIG.minSliceSpeed) return;
+    // Speed of the stroke, not just this segment: at 30 fps one segment of a real swipe is often slow
+    // (the hand decelerating over the word, or smoothing), so the previous segment's speed counts too.
+    here.speed = speed;
+    if (Math.max(speed, prev.speed ?? 0) < CONFIG.minSliceSpeed) return;
 
     // Sweep in each word's own frame: the word moved during dt too (a lot, over a tracking gap), so
     // compare the blade path with where the word was at the start and end of that same interval.
