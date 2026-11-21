@@ -1,0 +1,22 @@
+/* PARTNER owns this file (task P5). Baseline layout so the scaffold runs: make it an arcade cabinet. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #05070a; color: #d7ffd9; font-family: ui-monospace, "Courier New", monospace; }
+
+#stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; touch-action: none; user-select: none; }
+#stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#cam { position: absolute; right: 12px; bottom: 12px; width: 200px; transform: scaleX(-1); border: 2px solid #39ff14; opacity: 0.85; z-index: 5; }
+
+#hud, #screens { position: absolute; inset: 0; pointer-events: none; }
+#screens > * { pointer-events: auto; }
+
+.screen { display: grid; place-content: center; gap: 12px; text-align: center; height: 100%; background: rgba(5, 7, 10, 0.85); }
+.screen button { font: inherit; padding: 10px 18px; cursor: pointer; }
+
+/* Effect hooks toggled by src/ui/effects.js. Keep these class names. */
+#stage.deepfried { filter: contrast(1.8) saturate(2.5) hue-rotate(20deg); }
+#stage.shake { animation: shake 0.4s; }
+@keyframes shake {
+  25% { transform: translate(-6px, 3px); }
+  50% { transform: translate(6px, -3px); }
+  75% { transform: translate(-3px, -3px); }
+}

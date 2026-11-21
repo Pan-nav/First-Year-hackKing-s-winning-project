@@ -1,0 +1,65 @@
+{
+  "id": "data-structures",
+  "title": "Data Structures & Big-O",
+  "rounds": [
+    {
+      "rule": "Slice only: DATA STRUCTURES",
+      "correct": ["HashMap", "Stack", "Queue", "Linked List", "Heap", "Trie", "Graph", "Deque"],
+      "wrong": ["TCP", "SELECT", "Docker", "REST", "OAuth", "Git rebase", "Regex"]
+    },
+    {
+      "rule": "Slice only: O(log n)",
+      "correct": ["Binary search", "Heap push", "Heap pop", "AVL insert", "AVL lookup", "B-tree search"],
+      "wrong": ["Linear scan", "Bubble sort", "Array index", "HashMap get", "Merge sort", "Quick sort", "Matrix mult"]
+    },
+    {
+      "rule": "Slice only: SQL COMMANDS",
+      "correct": ["SELECT", "INSERT", "UPDATE", "DELETE", "JOIN", "GROUP BY", "HAVING", "WHERE"],
+      "wrong": ["git commit", "docker run", "npm install", "curl", "chmod", "grep", "ssh"]
+    }
+  ],
+  "definitions": {
+    "HashMap": "Key to value store with O(1) average lookup",
+    "Stack": "Last-in, first-out collection",
+    "Queue": "First-in, first-out collection",
+    "Linked List": "Nodes chained by pointers; O(n) search",
+    "Heap": "Tree giving fast access to the min or max",
+    "Trie": "Prefix tree, great for autocomplete",
+    "Graph": "Nodes joined by edges; models networks",
+    "Deque": "Double-ended queue: add or remove at both ends",
+    "TCP": "Reliable network protocol, not a data structure",
+    "SELECT": "SQL command that reads rows from a table",
+    "Docker": "Container tool, not a data structure",
+    "REST": "API style, not a data structure",
+    "OAuth": "Authorisation standard, not a data structure",
+    "Git rebase": "Rewrites commit history, not a data structure",
+    "Regex": "Text pattern language, not a data structure",
+    "Binary search": "Halves a sorted array each step: O(log n)",
+    "Heap push": "Sift-up through the tree height: O(log n)",
+    "Heap pop": "Sift-down through the tree height: O(log n)",
+    "AVL insert": "Balanced BST insert: O(log n)",
+    "AVL lookup": "Balanced BST lookup: O(log n)",
+    "B-tree search": "Wide balanced tree used by databases: O(log n)",
+    "Linear scan": "Checks every item: O(n)",
+    "Bubble sort": "Repeated neighbour swaps: O(n squared)",
+    "Array index": "Direct memory offset: O(1)",
+    "HashMap get": "Average O(1), not O(log n)",
+    "Merge sort": "Divide and merge: O(n log n)",
+    "Quick sort": "Average case O(n log n)",
+    "Matrix mult": "The naive version is O(n cubed)",
+    "INSERT": "SQL command that adds a new row",
+    "UPDATE": "SQL command that changes existing rows",
+    "DELETE": "SQL command that removes rows",
+    "JOIN": "SQL clause that combines rows from two tables",
+    "GROUP BY": "SQL clause that groups rows for aggregates",
+    "HAVING": "SQL clause that filters groups after GROUP BY",
+    "WHERE": "SQL clause that filters rows before grouping",
+    "git commit": "Git command that saves a snapshot",
+    "docker run": "Docker command that starts a container",
+    "npm install": "Node command that fetches packages",
+    "curl": "Command line tool for HTTP requests",
+    "chmod": "Shell command that changes file permissions",
+    "grep": "Shell command that searches text",
+    "ssh": "Shell command for secure remote login"
+  }
+}

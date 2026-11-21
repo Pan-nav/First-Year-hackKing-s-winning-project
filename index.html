@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slice the Rot</title>
+    <link rel="stylesheet" href="/src/styles/retro.css" />
+  </head>
+  <body>
+    <div id="stage">
+      <video id="cam" playsinline muted></video>
+      <canvas id="game"></canvas> <!-- OWNER draws the flying words here -->
+      <canvas id="fx"></canvas> <!-- PARTNER draws trail and particles here -->
+      <div id="hud"></div> <!-- PARTNER: score, lives, rule banner, mascot -->
+      <div id="screens"></div> <!-- PARTNER: start, round summary, game over -->
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
