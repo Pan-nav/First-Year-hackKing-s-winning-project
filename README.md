@@ -1,28 +1,31 @@
 # Slice the Rot
 
-A hand-tracked, Fruit Ninja-style **revision game**. Tech terms fly up the screen and every round has a rule ("Slice only: SQL commands"). Slice the right terms, dodge the wrong ones, and whatever you do, **don't slice the brainrot**: it deep-fries your screen.
+A retro arcade revision game: **slice the rot, keep the knowledge**. Fly-up terms challenge you to identify the right answers while avoiding plausible wrong terms and brainrot. Hand tracking or mouse controls can act as the blade.
 
-*Slice the rot, keep the knowledge.* Built for KCL Tech Society's First Year Hack (Retro Remix track), Sat 21 Nov 2026.
+## How to play
+1. Choose a revision deck on the **INSERT COIN** screen.
+2. Select **CAMERA / ARMS** and allow webcam access, or **MOUSE / TEST** for mouse controls.
+3. Read the rule at the start of each round (e.g. *Slice only: SQL COMMANDS*).
+4. Slice terms that fit the rule by moving a hand or the mouse through them. Avoid wrong terms and brainrot words; the latter deep-fry the screen!
+5. Review missed and wrong-sliced terms after each round. Enter your three-letter initials for the local high-score table after the game.
 
-## Run it
+Press **M** to mute/unmute sound. Respect your comfortable movement range; this is a game, not medical assessment software.
+
+## Local development
 ```bash
 npm install
-npm run dev      # http://localhost:5173 (the camera works on localhost)
+npm run dev
 ```
-No camera? Play with the mouse: `http://localhost:5173/?input=mouse`
+Open `http://localhost:5173/?input=mouse` to test without a camera. Webcam input requires permission and localhost or HTTPS.
 
-Other scripts: `npm run build`, `npm run preview`, `npm run check:decks`
+```bash
+npm run check:decks
+npm run build
+npm run preview
+```
 
-## Who does what
-| | Owner (works with Claude) | Partner (works with Codex) |
-|---|---|---|
-| Brief | `CLAUDE.md` | `AGENTS.md` |
-| Owns | hand tracking, engine, scoring, adaptive repetition, `src/main.js`, deck content | screens, HUD, effects, audio, retro CSS, storage, deploy, content QA |
+## Deployment
+A GitHub Actions Pages workflow is included. The repository owner must enable **Settings → Pages → Build and deployment → GitHub Actions** before relying on it. Vite uses the GitHub repository name as its production base path during the Pages build.
 
-The two halves only talk through events on the bus. The contract is `docs/CONTRACT.md`.
-
-## Team rules
-- Work on `main`, small commits, `git pull --rebase` before every push.
-- Only edit files you own. Need a change elsewhere? Add a note to `docs/QUESTIONS.md`.
-- `npm run build` must pass before you push.
-- Never commit API keys or `.env` files.
+## Team boundary
+See `AGENTS.md` (Partner), `CLAUDE.md` (Owner) and `docs/CONTRACT.md` (event bus contract). The Partner owns `src/ui/*`, `src/styles/*`, storage, deck loading, and deployment. The Owner owns game logic, input and `src/main.js`.
