@@ -7,18 +7,17 @@ export const CONFIG = {
   penaltyBrainrot: 15,
   comboWindowMs: 1500, // correct slices this close together build the combo
   comboMax: 5, // multiplier cap
-  wrongChance: 0.3, // share of spawned items that are plausible-but-wrong terms
-  brainrotChance: 0.15, // share of spawned items that are brainrot
+  wrongChance: 0.25, // share of spawned items that are plausible-but-wrong terms (rises to 0.35)
+  brainrotChance: 0.25, // share of spawned items that are brainrot (rises to 0.3), so judges meet it
+  minBrainrotPerRound: 2, // forced if chance alone has not produced them by 1/3 and 2/3 of the round
   missesPerLife: 6, // missed correct terms in one round needed to lose a life (count resets each round)
   gravity: 650, // logical px per second squared (low so words hang long enough to read)
   logicalWidth: 1280,
   logicalHeight: 720,
   minSliceSpeed: 0.6, // blade speed (screen widths per second) needed to count as a slice
   // A blade move longer than maxJump (screen widths) in one sample AND faster than maxBladeSpeed
-  // (screen widths per second) is a tracking glitch, not a swipe. Real fast swipes with a dropped
-  // camera frame or two stay well under 9 w/s; an id swap between two hands is ~12+ w/s.
-  // At 60 fps a real flick can cover a third of the screen in one frame; an id swap between two
-  // hands is still 25+ w/s, so these only catch true glitches.
+  // (screen widths per second) is a tracking glitch, not a swipe. A real flick can cover a third of
+  // the screen in one frame; an id swap between two hands is still 25+ w/s.
   maxJump: 0.4,
   maxBladeSpeed: 16,
   // Gaps longer than bridgeAfterMs (the tracker lost the hand, usually to motion blur mid-swipe) are
@@ -31,6 +30,9 @@ export const CONFIG = {
   // Camera box (MediaPipe 0..1 coords, x already mirrored) that maps onto the full screen, so the
   // hand never has to touch the frame edge, where MediaPipe loses it. Tune at the venue.
   reach: { left: 0.08, right: 0.92, top: 0.12, bottom: 0.85 },
+  // While the hand tracker has lost a hand (motion blur on the 30 fps webcam, hands touching), follow
+  // that arm with the body (pose) tracker. Turn off if the game gets slow or the blade misbehaves.
+  poseAssist: true,
   apexMin: 0.55, // apex height as a share of screen height
   apexMax: 0.8, // keeps the highest words below the HUD bar and within easy reach
   minAirtime: 2.2, // seconds; spawner never throws faster than this

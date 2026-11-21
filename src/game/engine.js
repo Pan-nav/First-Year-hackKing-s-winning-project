@@ -119,6 +119,7 @@ export function createEngine({ canvas }) {
   let missed = new Map();
   let wrongSliced = new Map();
   let diff = {};
+  let spawned = { correct: 0, wrong: 0, brainrot: 0 }; // this round's spawn mix (logged at round end)
   let nextId = 1;
   let cards = []; // definition cards: { x, y, w, h, title, lines, color, born }
   let banner = null; // round-start review callout: { title, sub, born }
@@ -178,8 +179,8 @@ export function createEngine({ canvas }) {
   function difficulty(i) {
     return {
       interval: Math.max(CONFIG.spawnIntervalMin, CONFIG.spawnIntervalStart - CONFIG.spawnIntervalStep * i),
-      wrong: Math.min(0.45, CONFIG.wrongChance + 0.03 * i),
-      brainrot: Math.min(0.25, CONFIG.brainrotChance + 0.02 * i),
+      wrong: Math.min(0.35, CONFIG.wrongChance + 0.03 * i),
+      brainrot: Math.min(0.3, CONFIG.brainrotChance + 0.02 * i),
       double: Math.min(0.5, CONFIG.doubleSpawnChance + 0.1 * i),
     };
   }
@@ -191,6 +192,7 @@ export function createEngine({ canvas }) {
     timerAcc = 0;
     misses = 0; // a fresh round forgives partial miss progress
     spawnTimer = FIRST_SPAWN_DELAY;
+    spawned = { correct: 0, wrong: 0, brainrot: 0 };
     missed = new Map();
     wrongSliced = new Map();
     diff = difficulty(i);
@@ -208,7 +210,13 @@ export function createEngine({ canvas }) {
     bus.emit('timer:update', { secondsLeft: CONFIG.roundSeconds });
   }
 
+  const logMix = () =>
+    console.info(
+      `[engine] round ${roundIndex + 1}: spawned ${spawned.correct} correct, ${spawned.wrong} wrong, ${spawned.brainrot} brainrot`,
+    );
+
   function endRound() {
+    logMix();
     if (roundIndex >= deck.rounds.length - 1) return gameOver();
     state = 'summary';
     const list = (m) => [...m.keys()].map((term) => ({ term, definition: definition(term) }));
@@ -235,24 +243,33 @@ export function createEngine({ canvas }) {
     if (lives <= 0) return;
     lives--;
     bus.emit('lives:update', { lives, max: CONFIG.maxLives });
-    if (lives <= 0) gameOver();
+    if (lives <= 0) {
+      logMix();
+      gameOver();
+    }
   }
 
   // ---- spawning ----
-  function pickTerm(pool) {
+  function pickTerm(pool, weighted = true) {
     const onScreen = new Set(items.map((it) => it.term));
     const fresh = pool.filter((t) => !onScreen.has(t));
-    return pickWeighted(fresh.length ? fresh : pool, pickStats);
+    const from = fresh.length ? fresh : pool;
+    return weighted ? pickWeighted(from, pickStats) : from[Math.floor(Math.random() * from.length)];
   }
 
   function spawnOne() {
     const round = deck.rounds[roundIndex];
     const r = Math.random();
+    // Every round shows at least minBrainrotPerRound brainrot words: if chance has not produced the
+    // first one by 1/3 of the round (the second by 2/3), the next spawn is forced to be brainrot.
+    const need = CONFIG.minBrainrotPerRound;
+    const due = spawned.brainrot < need && roundTime >= (CONFIG.roundSeconds * (spawned.brainrot + 1)) / (need + 1);
     let kind = 'correct';
-    if (r < diff.brainrot && brainrot.length) kind = 'brainrot';
+    if (brainrot.length && (due || r < diff.brainrot)) kind = 'brainrot';
     else if (r < diff.brainrot + diff.wrong) kind = 'wrong';
+    spawned[kind]++;
     const pool = kind === 'brainrot' ? brainrot : round[kind];
-    const term = kind === 'brainrot' ? pool[Math.floor(Math.random() * pool.length)] : pickTerm(pool);
+    const term = pickTerm(pool, kind !== 'brainrot');
     const review = kind !== 'brainrot' && isReview(term);
     if (kind !== 'brainrot') {
       stat(term).seen++;
@@ -302,12 +319,12 @@ export function createEngine({ canvas }) {
   const debugBlade = CONFIG.drawBladeDebug || new URLSearchParams(location.search).has('debug');
   const debugGaps = [];
 
-  function onBladePoint({ id, x, y, t }) {
+  function onBladePoint({ id, x, y, t, src }) {
     const lx = x * W;
     const ly = y * H;
     if (debugBlade) {
       const tr = trails.get(id) ?? [];
-      tr.push({ x: lx, y: ly, t });
+      tr.push({ x: lx, y: ly, t, src });
       trails.set(id, tr);
     }
     const prev = blades.get(id);
@@ -628,8 +645,12 @@ export function createEngine({ canvas }) {
       ctx.beginPath();
       tr.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
       ctx.stroke();
-      ctx.fillStyle = id ? '#ff9f1c' : '#ffffff'; // one dot per tracked camera frame
-      for (const p of tr) ctx.fillRect(p.x - 4, p.y - 4, 8, 8);
+      // One dot per tracked camera frame: white/orange from the hand tracker (hand 0/1), cyan where
+      // the body (pose) tracker filled in while the hand was lost.
+      for (const p of tr) {
+        ctx.fillStyle = p.src === 'pose' ? '#00e5ff' : id ? '#ff9f1c' : '#ffffff';
+        ctx.fillRect(p.x - 4, p.y - 4, 8, 8);
+      }
     }
     while (debugGaps.length && now - debugGaps[0].t > keep) debugGaps.shift();
     ctx.lineWidth = 6;

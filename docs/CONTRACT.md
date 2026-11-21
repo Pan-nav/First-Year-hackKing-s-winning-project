@@ -26,7 +26,7 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 ## Input events (produced by `input/handTracker.js` or `input/mouseBlade.js`)
 | Event | Payload | Meaning |
 |---|---|---|
-| `blade:point` | `{ id, x, y, t }` | Blade tip moved. `id` is 0 or 1 (which hand). Mouse is always 0. |
+| `blade:point` | `{ id, x, y, t, src? }` | Blade tip moved. `id` is 0 or 1 (which hand). Mouse is always 0. `src: 'pose'` marks a point estimated by the body tracker while the hand tracker had lost the hand (fast blurred swipes); treat it like any other point. |
 | `blade:end` | `{ id }` | Blade lifted or hand lost. The next point starts a new stroke. |
 
 ## UI to engine (produced by `ui/*`)
