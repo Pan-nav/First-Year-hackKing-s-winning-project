@@ -24,5 +24,5 @@ export const CONFIG = {
   doubleSpawnChance: 0.2, // chance a spawn throws two items (rises each round)
   chipFontPx: 38, // logical px, must stay >= 36
   hitPad: 26, // extra logical px around each chip for slicing (hand tracking is jittery)
-  drawBladeDebug: true, // thin blade line from the engine; turn off once the Partner's #fx trail is in
+  drawBladeDebug: false, // thin engine blade line; the Partner's #fx trail replaces it
 };
