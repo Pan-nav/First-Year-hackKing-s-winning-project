@@ -64,6 +64,7 @@ button:focus-visible,input:focus-visible {outline:3px solid #fff;outline-offset:
 .chart-zero {stroke:#44546e;stroke-width:1;stroke-dasharray:5 5}
 .chart-legend {font-size:11px;color:var(--green);text-align:center;margin:5px 0}
 /* Overlay remains noninteractive so it never blocks blade or buttons */
+#stage:has(.screen-over) #menu-targets {opacity:.65}
 @media(max-height:740px) {.screen-over .screen-panel {padding:10px 24px}.screen-over .screen h2 {margin:9px 0}.performance-graph svg {max-height:145px}}
 
 /* Job specification deck generation */
