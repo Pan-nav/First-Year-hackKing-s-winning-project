@@ -120,7 +120,7 @@ export function createEngine({ canvas }) {
   let startHistory = {}; // stored stats when the game started (to spot terms mastered this game)
   let learn = { correctTotal: 0, correctSliced: 0, wrongTotal: 0, wrongSliced: 0 }; // for game:over learning
   let warmupTime = 0;
-  let menuTarget = null; // hands-free NEXT / PLAY AGAIN target: { label, action, x, y, w, h, born }
+  let menuTarget = null; // hands-free NEXT / PLAY AGAIN target
   const menuTrails = new Map(); // id -> recent blade points, drawn on the menu layer
   let pickStats = {}; // stats used to weight term picks (O4 merges history in)
   let missed = new Map();
@@ -268,12 +268,13 @@ export function createEngine({ canvas }) {
   });
   canvas.parentElement?.append(menuCanvas);
   const mctx = menuCanvas.getContext('2d');
+  const menuTargetX = ({ action, w }) => action === 'again' ? W / 2 : W - w / 2 - 40;
 
   function showMenuTarget(label, action) {
     if (!CONFIG.handsFreeMenus) return;
     measureCtx.font = FONT;
     const w = Math.ceil(measureCtx.measureText(label).width) + CHIP_PAD_X * 2;
-    menuTarget = { label, action, w, h: CHIP_H, x: W - w / 2 - 40, y: H * 0.45, born: clock, learning: null };
+    menuTarget = { label, action, w, h: CHIP_H, y: H * (action === 'again' ? 0.5 : 0.45), born: clock, learning: null };
     if (action === 'again') menuTarget.learning = learningSummary();
   }
 
@@ -286,8 +287,9 @@ export function createEngine({ canvas }) {
     const m = menuTarget;
     const half = Math.max(0, m.w / 2 - m.h / 2);
     const r = m.h / 2 + CONFIG.hitPad;
-    const my = m.y + menuBob();
-    if (segSegDist2(prev.x, prev.y, here.x, here.y, m.x - half, my, m.x + half, my) <= r * r) triggerMenu();
+    const x = menuTargetX(m);
+    const y = m.y + menuBob();
+    if (segSegDist2(prev.x, prev.y, here.x, here.y, x - half, y, x + half, y) <= r * r) triggerMenu(x, y);
   }
   const menuBob = () => Math.sin(clock / 300) * 8;
 
@@ -302,6 +304,7 @@ export function createEngine({ canvas }) {
     mctx.setTransform(scale, 0, 0, scale, 0, 0);
     const m = menuTarget;
     const armed = clock - m.born >= CONFIG.menuArmMs;
+    const x = menuTargetX(m);
     const y = m.y + menuBob();
     // the blade trail (the effects layer is hidden under the screens)
     mctx.strokeStyle = 'rgba(57, 255, 20, 0.9)';
@@ -318,7 +321,7 @@ export function createEngine({ canvas }) {
       mctx.stroke();
     }
     mctx.globalAlpha = armed ? 1 : 0.4;
-    roundRectPath(mctx, m.x - m.w / 2, y - m.h / 2, m.w, m.h, 14);
+    roundRectPath(mctx, x - m.w / 2, y - m.h / 2, m.w, m.h, 14);
     mctx.fillStyle = 'rgba(8, 14, 24, 0.95)';
     mctx.fill();
     mctx.lineWidth = 5;
@@ -331,30 +334,30 @@ export function createEngine({ canvas }) {
     mctx.textAlign = 'center';
     mctx.textBaseline = 'middle';
     mctx.fillStyle = '#39ff14';
-    mctx.fillText(m.label, m.x, y + 2);
+    mctx.fillText(m.label, x, y + 2);
     mctx.font = TAG_FONT;
     mctx.fillStyle = '#e8f0ff';
-    mctx.fillText('SWIPE TO SELECT', m.x, y + m.h / 2 + 18);
+    mctx.fillText('SWIPE TO SELECT', x, y + m.h / 2 + 18);
     if (m.learning?.accuracy != null) {
       const l = m.learning;
       mctx.font = CARD_TITLE_FONT;
       mctx.fillStyle = '#ffcc39';
-      mctx.fillText(`${l.accuracy}% RIGHT CALLS`, m.x, y - m.h / 2 - 50);
+      mctx.fillText(`${l.accuracy}% RIGHT CALLS`, x, y - m.h / 2 - 50);
       mctx.font = TAG_FONT;
       mctx.fillText(
         l.improved.length ? `${l.improved.length} TERM${l.improved.length > 1 ? 'S' : ''} MASTERED THIS GAME` : 'PLAY AGAIN TO MASTER YOUR WEAK TERMS',
-        m.x,
+        x,
         y - m.h / 2 - 22,
       );
     }
     mctx.globalAlpha = 1;
   }
 
-  function triggerMenu() {
+  function triggerMenu(x, y) {
     const { action } = menuTarget;
     menuTarget = null;
     menuTrails.clear();
-    bus.emit('item:slice', { term: action, kind: 'correct', x: 0.85, y: 0.45, points: 0, combo: 0, definition: '' });
+    bus.emit('item:slice', { term: action, kind: 'correct', x: x / W, y: y / H, points: 0, combo: 0, definition: '' });
     if (action === 'continue') {
       // Press the summary screen's own NEXT ROUND button, so the screen closes exactly as on a click.
       const button = document.querySelector('#screens [data-action="continue"]');
