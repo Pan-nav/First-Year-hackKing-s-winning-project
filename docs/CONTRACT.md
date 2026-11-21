@@ -54,6 +54,8 @@ bus.emit('ui:start', { deckId: 'data-structures' });
 
 After `round:end` the engine pauses until `ui:continue`. After the last round (or lives reach 0) it emits `game:over` instead.
 
+**The last round does not emit `round:end`.** When the final round finishes, the engine goes straight to `game:over`; that round's missed and wrongly sliced terms are covered by `weakTerms`. So the round summary screen never shows after the final round, and a game that ends at 0 lives mid-round also emits `game:over` with no `round:end`.
+
 ## Data shapes
 
 **`public/decks/index.json`**: `[{ "id", "title", "description" }]`
