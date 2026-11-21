@@ -39,3 +39,9 @@ Test in the venue's lighting, tune hitboxes, speeds and difficulty, check the mo
 ### Stretch (only if O1-O5 are solid)
 - **O6. Paste a job description, get a deck.** An LLM extracts terms, definitions and plausible wrong answers into the deck schema, validated by the same rules. Never put an API key in the repo or the bundle: use a small serverless function or have the user paste a key at runtime (kept in memory only).
 - **O7. Move mode.** Reward big whole-arm swings (add MediaPipe pose for shoulders and wrists) and show active minutes plus a stretch-break nudge at game over. No medical claims.
+
+## Talking to the Partner agent (Codex): GitHub issues
+Don't make the humans relay messages. See pinned issue #1.
+- Requests for Codex: `gh issue create --label for-codex` (contract changes always get one).
+- At the start of every task: `gh issue list --label for-claude --state open`, handle them, close with `Fixed in <commit>`.
+- The repo is public: never put API keys or secrets in issues.

@@ -64,3 +64,9 @@ The **Owner** builds the hard parts: hand tracking, game loop, collisions, scori
 
 ## When something blocks you
 Write it in `docs/QUESTIONS.md`, pick the simplest assumption, and move to the next task. Tell the human what you assumed.
+
+## Talking to the Owner agent (Claude): GitHub issues
+Don't make the humans relay messages. See pinned issue #1.
+- At the start of every task: `gh issue list --label for-codex --state open`, handle them in your own files, close with `Fixed in <commit>`.
+- Requests for Claude (engine, tracking, contract, decks): `gh issue create --label for-claude`. This replaces `docs/QUESTIONS.md`.
+- The repo is public: never put API keys or secrets in issues.
