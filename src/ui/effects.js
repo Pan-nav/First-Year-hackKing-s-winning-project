@@ -58,8 +58,11 @@ export function initFx(canvas) {
     for (const [className, value] of [['consequence-emoji', effect.emoji], ['consequence-title', effect.title], ['consequence-subtitle', effect.subtitle]]) {
       const el = document.createElement('span'); el.className = className; el.textContent = value; consequenceOverlay.append(el);
     }
-    consequenceOverlay.className = `consequence-${effect.style}`;
+    // Clear the class and force a reflow so the animation restarts on back-to-back slices.
+    consequenceOverlay.className = '';
     consequenceOverlay.hidden = false;
+    void consequenceOverlay.offsetWidth;
+    consequenceOverlay.className = `consequence-${effect.style}`;
     clearTimeout(consequenceTimer);
     consequenceTimer = setTimeout(() => { consequenceOverlay.hidden = true; consequenceOverlay.className = ''; }, 1450);
   }
@@ -82,11 +85,11 @@ export function initFx(canvas) {
   bus.on('item:slice', ({ term, kind, x = 0.5, y = 0.5, points = 0, combo = 0 }) => {
     const cx = x * canvas.clientWidth, cy = y * canvas.clientHeight;
     const color = kind === 'correct' ? '#56ff97' : kind === 'brainrot' ? '#ffcc39' : '#ff4f87';
-    const count = reduced.matches ? 7 : kind === 'brainrot' ? 38 : kind === 'correct' ? 30 : 25;
+    const count = reduced.matches ? 7 : kind === 'brainrot' ? 24 : kind === 'correct' ? 30 : 25;
     for (let i = 0; i < count && particles.length < 200; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 60 + Math.random() * 200;
-      particles.push({ x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, born: performance.now(), life: 400 + Math.random() * 350, color, emoji: kind === 'brainrot' && i % 8 === 0 ? '💀' : '' });
+      particles.push({ x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, born: performance.now(), life: 400 + Math.random() * 350, color, emoji: kind === 'brainrot' && i % 6 === 0 ? '💀' : '' });
     }
     popups.push({ x: cx, y: cy, born: performance.now(), points, color, kind });
     if (kind === 'correct') showCombo(Number(combo) || 0);
@@ -117,10 +120,11 @@ export function initFx(canvas) {
       for (let i = 1; i < fresh.length; i++) {
         const alpha = Math.max(0, 1 - (now - fresh[i].t) / 250);
         const prev = fresh[i-1], point = fresh[i];
-        ctx.shadowBlur = 18; ctx.shadowColor = id ? '#ff61cb' : '#00fff0';
-        ctx.strokeStyle = id ? `rgba(255,97,203,${alpha})` : `rgba(0,255,240,${alpha})`;
-        ctx.lineWidth = 2 + alpha * 6;
-        ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(point.x,point.y); ctx.stroke();
+        // Fake the glow with a wide translucent stroke: shadowBlur per segment was the costliest thing drawn each frame.
+        const rgb = id ? '255,97,203' : '0,255,240';
+        ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(point.x,point.y);
+        ctx.strokeStyle = `rgba(${rgb},${alpha * 0.25})`; ctx.lineWidth = 10 + alpha * 12; ctx.stroke();
+        ctx.strokeStyle = `rgba(${rgb},${alpha})`; ctx.lineWidth = 2 + alpha * 6; ctx.stroke();
       }
       ctx.shadowBlur = 0;
     }
