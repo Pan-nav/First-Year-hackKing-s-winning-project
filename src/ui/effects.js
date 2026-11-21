@@ -144,10 +144,28 @@ export function initFx(canvas) {
   };
   resize();
   window.addEventListener('resize', resize);
-  bus.on('blade:point', ({ id = 0, x, y, t }) => {
+  // The trail only joins points the engine would also slice along (onBladePoint in src/game/engine.js):
+  // an impossible jump, a sideways switch between hand and body tracker, or a pose glitch starts a new
+  // line instead of drawing a zig-zag across the screen.
+  bus.on('blade:point', ({ id = 0, x, y, t, src }) => {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const w = canvas.clientWidth || 1;
+    const now = performance.now();
     const line = trails.get(id) || [];
-    line.push({ x: x * canvas.clientWidth, y: y * canvas.clientHeight, t: performance.now() });
+    const p = { x: x * w, y: y * canvas.clientHeight, t: now, at: Number.isFinite(t) ? t : now, pose: src === 'pose', dx: 0, dy: 0, gap: false };
+    const prev = line.at(-1);
+    if (prev) {
+      p.dx = p.x - prev.x;
+      p.dy = p.y - prev.y;
+      const dist = Math.hypot(p.dx, p.dy) / w; // screen widths, as the engine measures
+      const speed = dist / Math.max((p.at - prev.at) / 1000, 1e-3);
+      const turn = (prev.dx * p.dx + prev.dy * p.dy) / (Math.hypot(prev.dx, prev.dy) * Math.hypot(p.dx, p.dy) || 1);
+      p.gap = (dist > CONFIG.maxJump && speed > CONFIG.maxBladeSpeed)
+        || (prev.pose !== p.pose && dist > CONFIG.switchMaxJump && turn < 0.5)
+        || (prev.pose && p.pose && dist > CONFIG.poseMaxStep);
+      if (p.gap) { p.dx = 0; p.dy = 0; }
+    }
+    line.push(p);
     if (line.length > 28) line.shift();
     trails.set(id, line);
   });
@@ -183,6 +201,7 @@ export function initFx(canvas) {
       trails.set(id, fresh);
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       for (let i = 1; i < fresh.length; i++) {
+        if (fresh[i].gap) continue; // a glitch jump: don't draw a line across it
         const alpha = Math.max(0, 1 - (now - fresh[i].t) / 250);
         const prev = fresh[i-1], point = fresh[i];
         // Fake the glow with a wide translucent stroke: shadowBlur per segment was the costliest thing drawn each frame.

@@ -10,8 +10,14 @@
 //   switchBackFrames frames in a row. Switching on every flicker made the blade zig-zag.
 // - When a hand is lost, its last real (unfiltered) position is sent first, because the smoothed
 //   blade lags behind the fingertip.
+// - A point the engine would refuse to slice along as a tracking glitch (a tip teleporting across the
+//   screen, a pose frame jumping too far) is dropped here too. Before, the blade still moved to it, so it
+//   zig-zagged out and back, and the stroke after it started from the wrong place.
+import { CONFIG } from '../config.js';
 import { assignIds, linkArms } from './handMapping.js';
 import { OneEuro } from './oneEuro.js';
+
+const ASPECT_Y = 9 / 16; // y in screen widths on the 1280x720 logical screen, as the engine measures
 
 export const FUSION_DEFAULTS = {
   handLostMs: 450, // no point of any source for this long -> blade end
@@ -22,6 +28,11 @@ export const FUSION_DEFAULTS = {
   switchBackFrames: 2, // consecutive hand frames needed to go back from pose to the hand tracker
   maxOffset: 0.2, // fingertip-minus-arm offset is clamped to this (screen units)
   filter: { minCutoff: 1.2, beta: 10, dCutoff: 5 }, // One-Euro: steady when still, little lag when fast
+  // Same limits the engine uses to refuse a stroke as a glitch (CONFIG). A tip further than maxJump from
+  // its blade at more than maxSpeed is a false detection (face, spectator's hand) or the other hand.
+  maxJump: CONFIG.maxJump,
+  maxSpeed: CONFIG.maxBladeSpeed,
+  poseMaxStep: CONFIG.poseMaxStep, // pose-to-pose step in one frame (~33 ms) that is a pose glitch
 };
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -74,14 +85,27 @@ export function createFusion(options = {}) {
     links = { ...links, [id]: null };
   }
 
+  const dist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * ASPECT_Y);
+  // This tip is not this blade's hand: it would have to have moved impossibly fast to get there.
+  function teleported(h, tip, now) {
+    if (!h.active || !h.lastPos) return false;
+    const d = dist(tip, h.lastPos);
+    return d > o.maxJump && d / (Math.max(now - h.lastSeen, 1) / 1000) > o.maxSpeed;
+  }
+
   return {
     /**
      * Phase 1: this frame's hand-tracker fingertips (screen space, at most 2).
      * @returns {{ needPose: boolean, wantPose: boolean }} needPose: run pose now (a hand is lost or on
      *   pose); wantPose: pose is useful to keep warm (some hand is tracked), e.g. every other frame.
      */
-    hands(now, tips) {
-      const ids = assignIds(tips, { active: hands.map((h) => h.active), lastPos: hands.map((h) => h.lastPos) });
+    hands(now, allTips) {
+      const allIds = assignIds(allTips, { active: hands.map((h) => h.active), lastPos: hands.map((h) => h.lastPos) });
+      // Drop tips that teleported away from the blade they were given: for that blade the frame counts
+      // as "hand not seen", so pose assist or the blade's own timeout handles it as a lost hand.
+      const keep = allIds.map((id, i) => !teleported(hands[id], allTips[i], now));
+      const tips = allTips.filter((_, i) => keep[i]);
+      const ids = allIds.filter((_, i) => keep[i]);
       const seen = [false, false];
       for (const id of ids) seen[id] = true;
       frame = { now, tips, ids, seen };
@@ -158,7 +182,9 @@ export function createFusion(options = {}) {
           cand.x > -0.05 &&
           cand.x < 1.05 &&
           cand.y > -0.1 &&
-          cand.y < 1.0;
+          cand.y < 1.0 &&
+          // A pose-to-pose jump this big within a frame or two is the body tracker glitching.
+          !(h.mode === 'pose' && h.lastPos && now - h.lastSeen < 70 && dist(cand, h.lastPos) > o.poseMaxStep);
         if (poseOk) {
           h.mode = 'pose';
           emit(id, { x: clamp01(cand.x), y: clamp01(cand.y) }, now, 'pose');
