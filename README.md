@@ -55,7 +55,7 @@ Each deck has at least three rounds. Each round has a rule, the terms that fit i
 
 Press **✦ PASTE A JOB SPEC** on the start screen and paste an internship or job ad. A language model picks out the role's key terms, writes the definitions and plausible wrong answers, and builds a deck. The deck has to pass the same rules as the hand-written ones before you can play it. It uses Gemini by default, or Claude if you paste a key that starts with `sk-ant-`.
 
-- **On the demo laptop:** put `VITE_GEMINI_API_KEY=...` in `.env.local`. That file is git-ignored and only read by `npm run dev`, so the key never ends up in a build. When a key is loaded, the key field is hidden.
+- **Preloaded key:** put `VITE_GEMINI_API_KEY=...` in `.env.local` (git-ignored) to play locally. The GitHub Pages build takes the key from the `GEMINI_API_KEY` repository secret instead. When a key is preloaded, the key field is hidden. ⚠ A preloaded key is baked into the JavaScript bundle, so anyone can read it from the live site. Use a key you can rotate, and ideally restrict it to the site's address.
 - **Anywhere else:** paste a key into the form. It is kept in memory only and never saved.
 - Generated decks last until you reload the page. To hide the feature, set `VITE_ENABLE_JOB_SPEC=false`.
 

@@ -50,11 +50,12 @@ async function useInput(kind) {
 // only: nothing is saved, and a reload forgets both. The SDK is loaded on first use, so it costs
 // nothing for players who never open the job-spec panel.
 const generatedDecks = new Map(); // deckId -> deck
-// Demo laptop: a key in .env.local (git-ignored) is used when the player leaves the key field empty.
-// Dev server only: import.meta.env.DEV is false in `npm run build`, so the key never reaches dist/.
-const devKey = import.meta.env.DEV ? (import.meta.env.VITE_GEMINI_API_KEY ?? '') : '';
-let apiKeyInMemory = devKey;
-bus.emit('deck:keyStatus', { hasKey: Boolean(devKey) });
+// Preloaded key, so the demo never asks for one: .env.local (git-ignored) locally, and the GEMINI_API_KEY
+// repo secret in the GitHub Pages build (.github/workflows/pages.yml). DEMO TRADE-OFF: the key is baked
+// into the public bundle, where anyone can read it. Rotate it after the demo, or delete the secret.
+const presetKey = import.meta.env.VITE_GEMINI_API_KEY ?? '';
+let apiKeyInMemory = presetKey;
+bus.emit('deck:keyStatus', { hasKey: Boolean(presetKey) });
 let generating = false;
 bus.on('ui:generateDeck', async ({ jobText, apiKey }) => {
   if (generating) return;
