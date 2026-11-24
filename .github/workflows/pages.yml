@@ -24,12 +24,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:decks
-      - run: npm run build -- --base=/First-Year-hackKing-s-winning-project/
+      # Pages reports the site's path ("/<repo name>", or "" on a custom domain), so renaming the repo
+      # can't leave the page pointing at assets under the old name (a blank white page).
+      - id: pages
+        uses: actions/configure-pages@v5
+      - run: npm run build -- --base=${{ steps.pages.outputs.base_path }}/
         env:
           # Demo: preloads the job-spec key so the live site never asks for one. It ends up readable in
           # the public bundle, so rotate the key after the demo (or delete the secret and redeploy).
           VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

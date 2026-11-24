@@ -6,7 +6,7 @@ Slice the Rot is a retro arcade revision game you play with your hands. Tech ter
 
 The webcam tracks your hands in the browser, so there is nothing to install and no controller. Your index fingertip is the blade, and both hands can slice at once. Correct and wrong terms look identical, so you can't win by reflex: you have to actually know the material.
 
-▶ **Play it:** https://pan-nav.github.io/First-Year-hackKing-s-winning-project/
+▶ **Play it:** https://pan-nav.github.io/Slice-The-Rot/
 
 It's made for students revising for technical interviews, spring weeks and exams. A quick game turns definitions you skim past into split-second decisions, then shows you exactly which ones you got wrong.
 
